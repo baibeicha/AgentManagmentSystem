@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package api.grpc.agent.v1;
+
+option go_package = "pkg/";
+
+// AgentService обеспечивает двунаправленную связь между агентом и шлюзом
+service AgentService {
+  // Основной мультиплексированный стрим
+  rpc ConnectStream(stream ConnectStreamRequest) returns (stream ConnectStreamResponse);
+}
+
+// Запрос стрима, инкапсулирующий сообщения от агента к серверу (Upstream)
+message ConnectStreamRequest {
+  oneof payload {
+    TelemetryPayload telemetry = 1;
+    TerminalOutput terminal_output = 2;
+  }
+}
+
+// Заглушка структуры телеметрии (в будущем будет расширена под батчинг)
+message TelemetryPayload {
+  double cpu_usage_percent = 1;
+  double ram_usage_mb = 2;
+}
+
+// Вывод из системного терминала (stdout/stderr)
+message TerminalOutput {
+  bytes data = 1;
+}
+
+// Ответ стрима, инкапсулирующий команды от сервера к агенту (Downstream)
+message ConnectStreamResponse {
+  oneof payload {
+    TerminalInput terminal_input = 1;
+    ExecuteScript execute_script = 2;
+  }
+}
+
+// Ввод команд в терминал агента (stdin)
+message TerminalInput {
+  bytes data = 1;
+}
+
+// Команда на запуск bash/powershell скрипта
+message ExecuteScript {
+  string script_content = 1;
+  int64 timeout_seconds = 2;
+}
