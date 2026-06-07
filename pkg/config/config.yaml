@@ -1,0 +1,35 @@
+grpc:
+  port: 50051
+  tls:
+    enabled: true
+    cert_path: "./certs/server.crt"
+    key_path: "./certs/server.key"
+
+sso:
+  issuer: "http://localhost:8080"
+
+server:
+  secured: true
+  port: 8080
+
+datasource:
+  url: "195.208.118.156:5432"
+  db: auth
+  user: bbcpuser
+  password: bbcp_pass
+
+superuser:
+  username: admin
+  email: admin@admin.com
+  password: password
+
+jwt:
+  ttl:
+    access: 1
+    refresh: 15
+    unit: m
+  cleanup:
+    interval: 5
+    unit: m
+  private_key_path: "certs/private.pem"
+  public_key_path: "certs/public.pem"
