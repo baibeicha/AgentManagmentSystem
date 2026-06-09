@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"strconv"
 
@@ -12,10 +13,18 @@ import (
 	"AgentManagmentSystem/pkg/encoder"
 	"AgentManagmentSystem/pkg/jwt"
 
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
-	"google.golang.org/grpc/status"
+)
+
+var (
+	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrUserNotFound       = errors.New("user not found")
+	ErrResourceNotFound   = errors.New("resource not found")
+	ErrInternalError      = errors.New("internal server error")
+	ErrInvalidToken       = errors.New("invalid refresh token")
+	ErrTokenReused        = errors.New("session rotation failed or token reused")
+	ErrInvalidArgument    = errors.New("invalid argument format")
 )
 
 type AuthService struct {
@@ -73,12 +82,16 @@ func (a *AuthService) Login(ctx context.Context, request *server.LoginRequest) (
 	user, err := a.userRepo.GetByLogin(ctx, request.Login)
 	if err != nil {
 		a.log.Warn("failed login attempt: user not found", "login", request.Login)
-		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
+		return nil, ErrInvalidCredentials
+	}
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
 	if !encoder.CheckPassword(request.Password, user.PasswordHash) {
 		a.log.Warn("failed login attempt: wrong password", "login", request.Login)
-		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
+		return nil, ErrInvalidCredentials
 	}
 
 	clientIP, userAgent := extractClientMeta(ctx)
@@ -93,7 +106,7 @@ func (a *AuthService) Login(ctx context.Context, request *server.LoginRequest) (
 	tokens, err := a.tokenProvider.GenerateTokens(ctx, adapter, request.DeviceId, clientIP, userAgent)
 	if err != nil {
 		a.log.Error("failed to generate tokens", "error", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, ErrInternalError
 	}
 
 	return &server.LoginResponse{
@@ -105,18 +118,18 @@ func (a *AuthService) Login(ctx context.Context, request *server.LoginRequest) (
 func (a *AuthService) RefreshToken(ctx context.Context, request *server.RefreshTokenRequest) (*server.RefreshTokenResponse, error) {
 	claims, err := a.tokenProvider.ParseAndVerify(request.RefreshToken)
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "invalid refresh token")
+		return nil, ErrInvalidToken
 	}
 
 	issuer, err := claims.GetIssuer()
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "invalid refresh token: invalid issuer")
+		return nil, ErrInvalidToken
 	}
 
 	userID, _ := strconv.ParseInt(issuer, 10, 64)
 	user, err := a.userRepo.GetByID(ctx, userID)
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "user not found")
+		return nil, ErrUserNotFound
 	}
 
 	clientIP, userAgent := extractClientMeta(ctx)
@@ -125,7 +138,7 @@ func (a *AuthService) RefreshToken(ctx context.Context, request *server.RefreshT
 	tokens, err := a.tokenProvider.RefreshTokens(ctx, request.RefreshToken, adapter, clientIP, userAgent)
 	if err != nil {
 		a.log.Warn("token rotation failed", "error", err, "user_id", userID)
-		return nil, status.Error(codes.Unauthenticated, "session rotation failed or token reused")
+		return nil, ErrTokenReused
 	}
 
 	return &server.RefreshTokenResponse{
@@ -138,6 +151,7 @@ func (a *AuthService) Logout(ctx context.Context, request *server.LogoutRequest)
 	err := a.tokenProvider.DeleteToken(ctx, request.RefreshToken)
 	if err != nil {
 		a.log.Error("failed to delete token during logout", "error", err)
+		return nil, ErrInternalError
 	}
 
 	return &server.LogoutResponse{Success: true}, nil
@@ -146,22 +160,22 @@ func (a *AuthService) Logout(ctx context.Context, request *server.LogoutRequest)
 func (a *AuthService) CheckPermission(ctx context.Context, request *server.CheckPermissionRequest) (*server.CheckPermissionResponse, error) {
 	userID, err := strconv.ParseInt(request.UserId, 10, 64)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid user_id format")
+		return nil, ErrInvalidArgument
 	}
 
 	tenantID, err := strconv.ParseInt(request.TenantId, 10, 64)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid tenant_id format")
+		return nil, ErrInvalidArgument
 	}
 
 	resourceID, err := strconv.ParseInt(request.ResourceId, 10, 64)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid resource_id format")
+		return nil, ErrInvalidArgument
 	}
 
 	user, err := a.userRepo.GetByID(ctx, userID)
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "user not found")
+		return nil, ErrUserNotFound
 	}
 
 	if user.TenantID != tenantID {
@@ -176,7 +190,7 @@ func (a *AuthService) CheckPermission(ctx context.Context, request *server.Check
 	if user.GlobalRole == "tenant_admin" {
 		host, err := a.hostRepo.GetByID(ctx, resourceID)
 		if err != nil {
-			return nil, status.Error(codes.NotFound, "resource not found")
+			return nil, ErrResourceNotFound
 		}
 		if host.TenantID == user.TenantID {
 			return &server.CheckPermissionResponse{Allowed: true}, nil
@@ -192,7 +206,7 @@ func (a *AuthService) CheckPermission(ctx context.Context, request *server.Check
 	hasAccess, err := a.policyRepo.CheckPermission(ctx, user.ID, *host.GroupID, request.Action)
 	if err != nil {
 		a.log.Error("failed to check granular permissions", "error", err)
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, ErrInternalError
 	}
 
 	return &server.CheckPermissionResponse{Allowed: hasAccess}, nil
