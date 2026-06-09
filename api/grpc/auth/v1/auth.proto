@@ -4,10 +4,9 @@ package api.grpc.auth.v1;
 
 option go_package = "pkg/";
 
-// AuthService предоставляет методы для аутентификации и выдачи токенов
 service AuthService {
-  // Метод логина для получения Access и Refresh токенов
   rpc Login(LoginRequest) returns (LoginResponse);
+  rpc CheckPermission (CheckPermissionRequest) returns (CheckPermissionResponse);
 }
 
 message LoginRequest {
@@ -19,4 +18,15 @@ message LoginRequest {
 message LoginResponse {
   string access_token = 1;
   string refresh_token = 2;
+}
+
+message CheckPermissionRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  string resource_id = 3;
+  string action = 4;
+}
+
+message CheckPermissionResponse {
+  bool allowed = 1;
 }

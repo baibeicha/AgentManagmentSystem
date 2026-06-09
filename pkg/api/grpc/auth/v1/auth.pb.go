@@ -133,6 +133,118 @@ func (x *LoginResponse) GetRefreshToken() string {
 	return ""
 }
 
+type CheckPermissionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ResourceId    string                 `protobuf:"bytes,3,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
+	Action        string                 `protobuf:"bytes,4,opt,name=action,proto3" json:"action,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CheckPermissionRequest) Reset() {
+	*x = CheckPermissionRequest{}
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckPermissionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckPermissionRequest) ProtoMessage() {}
+
+func (x *CheckPermissionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckPermissionRequest.ProtoReflect.Descriptor instead.
+func (*CheckPermissionRequest) Descriptor() ([]byte, []int) {
+	return file_api_grpc_auth_v1_auth_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CheckPermissionRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *CheckPermissionRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *CheckPermissionRequest) GetResourceId() string {
+	if x != nil {
+		return x.ResourceId
+	}
+	return ""
+}
+
+func (x *CheckPermissionRequest) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+type CheckPermissionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Allowed       bool                   `protobuf:"varint,1,opt,name=allowed,proto3" json:"allowed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CheckPermissionResponse) Reset() {
+	*x = CheckPermissionResponse{}
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckPermissionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckPermissionResponse) ProtoMessage() {}
+
+func (x *CheckPermissionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckPermissionResponse.ProtoReflect.Descriptor instead.
+func (*CheckPermissionResponse) Descriptor() ([]byte, []int) {
+	return file_api_grpc_auth_v1_auth_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CheckPermissionResponse) GetAllowed() bool {
+	if x != nil {
+		return x.Allowed
+	}
+	return false
+}
+
 var File_api_grpc_auth_v1_auth_proto protoreflect.FileDescriptor
 
 const file_api_grpc_auth_v1_auth_proto_rawDesc = "" +
@@ -144,9 +256,18 @@ const file_api_grpc_auth_v1_auth_proto_rawDesc = "" +
 	"\tdevice_id\x18\x03 \x01(\tR\bdeviceId\"W\n" +
 	"\rLoginResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
-	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken2W\n" +
+	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\"\x87\x01\n" +
+	"\x16CheckPermissionRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
+	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1f\n" +
+	"\vresource_id\x18\x03 \x01(\tR\n" +
+	"resourceId\x12\x16\n" +
+	"\x06action\x18\x04 \x01(\tR\x06action\"3\n" +
+	"\x17CheckPermissionResponse\x12\x18\n" +
+	"\aallowed\x18\x01 \x01(\bR\aallowed2\xbf\x01\n" +
 	"\vAuthService\x12H\n" +
-	"\x05Login\x12\x1e.api.grpc.auth.v1.LoginRequest\x1a\x1f.api.grpc.auth.v1.LoginResponseB\x06Z\x04pkg/b\x06proto3"
+	"\x05Login\x12\x1e.api.grpc.auth.v1.LoginRequest\x1a\x1f.api.grpc.auth.v1.LoginResponse\x12f\n" +
+	"\x0fCheckPermission\x12(.api.grpc.auth.v1.CheckPermissionRequest\x1a).api.grpc.auth.v1.CheckPermissionResponseB\x06Z\x04pkg/b\x06proto3"
 
 var (
 	file_api_grpc_auth_v1_auth_proto_rawDescOnce sync.Once
@@ -160,16 +281,20 @@ func file_api_grpc_auth_v1_auth_proto_rawDescGZIP() []byte {
 	return file_api_grpc_auth_v1_auth_proto_rawDescData
 }
 
-var file_api_grpc_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_api_grpc_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_api_grpc_auth_v1_auth_proto_goTypes = []any{
-	(*LoginRequest)(nil),  // 0: api.grpc.auth.v1.LoginRequest
-	(*LoginResponse)(nil), // 1: api.grpc.auth.v1.LoginResponse
+	(*LoginRequest)(nil),            // 0: api.grpc.auth.v1.LoginRequest
+	(*LoginResponse)(nil),           // 1: api.grpc.auth.v1.LoginResponse
+	(*CheckPermissionRequest)(nil),  // 2: api.grpc.auth.v1.CheckPermissionRequest
+	(*CheckPermissionResponse)(nil), // 3: api.grpc.auth.v1.CheckPermissionResponse
 }
 var file_api_grpc_auth_v1_auth_proto_depIdxs = []int32{
 	0, // 0: api.grpc.auth.v1.AuthService.Login:input_type -> api.grpc.auth.v1.LoginRequest
-	1, // 1: api.grpc.auth.v1.AuthService.Login:output_type -> api.grpc.auth.v1.LoginResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: api.grpc.auth.v1.AuthService.CheckPermission:input_type -> api.grpc.auth.v1.CheckPermissionRequest
+	1, // 2: api.grpc.auth.v1.AuthService.Login:output_type -> api.grpc.auth.v1.LoginResponse
+	3, // 3: api.grpc.auth.v1.AuthService.CheckPermission:output_type -> api.grpc.auth.v1.CheckPermissionResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -186,7 +311,7 @@ func file_api_grpc_auth_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_grpc_auth_v1_auth_proto_rawDesc), len(file_api_grpc_auth_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

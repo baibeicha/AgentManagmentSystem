@@ -4,6 +4,7 @@ import (
 	"log"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -11,7 +12,8 @@ import (
 type Config struct {
 	*viper.Viper
 	filename string
-	GRPC     GRPCConfig `mapstructure:"grpc"`
+	GRPC     GRPCConfig  `mapstructure:"grpc"`
+	Redis    RedisConfig `mapstructure:"redis"`
 }
 
 type GRPCConfig struct {
@@ -23,6 +25,16 @@ type TLSConfig struct {
 	Enabled  bool   `mapstructure:"enabled"`
 	CertPath string `mapstructure:"cert_path"`
 	KeyPath  string `mapstructure:"key_path"`
+}
+
+type RedisConfig struct {
+	Addr        string        `mapstructure:"addr"`
+	Password    string        `mapstructure:"password"`
+	User        string        `mapstructure:"user"`
+	DB          int           `mapstructure:"db"`
+	MaxRetries  int           `mapstructure:"max_retries"`
+	DialTimeout time.Duration `mapstructure:"dial_timeout"`
+	Timeout     time.Duration `mapstructure:"timeout"`
 }
 
 func MustLoadEmpty(defaults ...string) *Config {
@@ -53,6 +65,7 @@ func MustLoad(filename string, defaults ...string) *Config {
 
 	v.AddConfigPath(".")
 	v.AddConfigPath("./config")
+	v.AddConfigPath("./configs")
 
 	for i := 0; i < len(defaults); i++ {
 		if defaults[i] == "cfg-path" {

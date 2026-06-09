@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	cfg := config.MustLoad("test", "cfg-path", "./cmd/auth")
+	cfg := config.MustLoad("auth-config")
 }

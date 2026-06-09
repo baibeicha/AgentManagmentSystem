@@ -20,22 +20,24 @@ type Tokens struct {
 }
 
 type TokenClaims struct {
-	Username string `json:"username"`
-	Scopes   string `json:"scopes,omitempty"`
+	Username   string `json:"username"`
+	TenantID   string `json:"tid"`
+	GlobalRole string `json:"rol"`
 	jwt.RegisteredClaims
 }
 
 type UserDetails interface {
 	GetID() string
 	GetUsername() string
-	GetScopes() string
-	GetDetails() map[string]string
+	GetTenantID() string
+	GetRole() string
 }
 
 func (tp *TokenProvider) GenerateAccess(user UserDetails) (string, error) {
 	claims := TokenClaims{
-		Username: user.GetUsername(),
-		Scopes:   user.GetScopes(),
+		Username:   user.GetUsername(),
+		TenantID:   user.GetTenantID(),
+		GlobalRole: user.GetRole(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    user.GetID(),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tp.accessTTL)),
@@ -49,8 +51,9 @@ func (tp *TokenProvider) GenerateAccess(user UserDetails) (string, error) {
 
 func (tp *TokenProvider) GenerateRefresh(user UserDetails) (string, error) {
 	claims := TokenClaims{
-		Username: user.GetUsername(),
-		Scopes:   user.GetScopes(),
+		Username:   user.GetUsername(),
+		TenantID:   user.GetTenantID(),
+		GlobalRole: user.GetRole(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    user.GetID(),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tp.refreshTTL)),
