@@ -8,13 +8,25 @@ import (
 
 type AuthServiceApi struct {
 	server.UnimplementedAuthServiceServer
-	authService service.AuthService
+	authService *service.AuthService
 }
 
 func (a AuthServiceApi) Login(ctx context.Context, request *server.LoginRequest) (*server.LoginResponse, error) {
-	return a.authService.Login(ctx, request)
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AuthServiceApi) RefreshToken(ctx context.Context, request *server.RefreshTokenRequest) (*server.RefreshTokenResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a AuthServiceApi) Logout(ctx context.Context, request *server.LogoutRequest) (*server.LogoutResponse, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (a AuthServiceApi) CheckPermission(ctx context.Context, request *server.CheckPermissionRequest) (*server.CheckPermissionResponse, error) {
-	return a.authService.CheckPermission(ctx, request)
+	//TODO implement me
+	panic("implement me")
 }

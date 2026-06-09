@@ -133,6 +133,190 @@ func (x *LoginResponse) GetRefreshToken() string {
 	return ""
 }
 
+type RefreshTokenRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RefreshToken  string                 `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefreshTokenRequest) Reset() {
+	*x = RefreshTokenRequest{}
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefreshTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshTokenRequest) ProtoMessage() {}
+
+func (x *RefreshTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshTokenRequest.ProtoReflect.Descriptor instead.
+func (*RefreshTokenRequest) Descriptor() ([]byte, []int) {
+	return file_api_grpc_auth_v1_auth_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *RefreshTokenRequest) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+type RefreshTokenResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccessToken   string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	RefreshToken  string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefreshTokenResponse) Reset() {
+	*x = RefreshTokenResponse{}
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefreshTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshTokenResponse) ProtoMessage() {}
+
+func (x *RefreshTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshTokenResponse.ProtoReflect.Descriptor instead.
+func (*RefreshTokenResponse) Descriptor() ([]byte, []int) {
+	return file_api_grpc_auth_v1_auth_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *RefreshTokenResponse) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *RefreshTokenResponse) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+type LogoutRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RefreshToken  string                 `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogoutRequest) Reset() {
+	*x = LogoutRequest{}
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogoutRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogoutRequest) ProtoMessage() {}
+
+func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogoutRequest.ProtoReflect.Descriptor instead.
+func (*LogoutRequest) Descriptor() ([]byte, []int) {
+	return file_api_grpc_auth_v1_auth_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *LogoutRequest) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+type LogoutResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogoutResponse) Reset() {
+	*x = LogoutResponse{}
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogoutResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogoutResponse) ProtoMessage() {}
+
+func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogoutResponse.ProtoReflect.Descriptor instead.
+func (*LogoutResponse) Descriptor() ([]byte, []int) {
+	return file_api_grpc_auth_v1_auth_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *LogoutResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
 type CheckPermissionRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
@@ -145,7 +329,7 @@ type CheckPermissionRequest struct {
 
 func (x *CheckPermissionRequest) Reset() {
 	*x = CheckPermissionRequest{}
-	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[2]
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -157,7 +341,7 @@ func (x *CheckPermissionRequest) String() string {
 func (*CheckPermissionRequest) ProtoMessage() {}
 
 func (x *CheckPermissionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[2]
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -170,7 +354,7 @@ func (x *CheckPermissionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckPermissionRequest.ProtoReflect.Descriptor instead.
 func (*CheckPermissionRequest) Descriptor() ([]byte, []int) {
-	return file_api_grpc_auth_v1_auth_proto_rawDescGZIP(), []int{2}
+	return file_api_grpc_auth_v1_auth_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CheckPermissionRequest) GetUserId() string {
@@ -210,7 +394,7 @@ type CheckPermissionResponse struct {
 
 func (x *CheckPermissionResponse) Reset() {
 	*x = CheckPermissionResponse{}
-	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[3]
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -222,7 +406,7 @@ func (x *CheckPermissionResponse) String() string {
 func (*CheckPermissionResponse) ProtoMessage() {}
 
 func (x *CheckPermissionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[3]
+	mi := &file_api_grpc_auth_v1_auth_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -235,7 +419,7 @@ func (x *CheckPermissionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckPermissionResponse.ProtoReflect.Descriptor instead.
 func (*CheckPermissionResponse) Descriptor() ([]byte, []int) {
-	return file_api_grpc_auth_v1_auth_proto_rawDescGZIP(), []int{3}
+	return file_api_grpc_auth_v1_auth_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CheckPermissionResponse) GetAllowed() bool {
@@ -256,7 +440,16 @@ const file_api_grpc_auth_v1_auth_proto_rawDesc = "" +
 	"\tdevice_id\x18\x03 \x01(\tR\bdeviceId\"W\n" +
 	"\rLoginResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
-	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\"\x87\x01\n" +
+	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\":\n" +
+	"\x13RefreshTokenRequest\x12#\n" +
+	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\"^\n" +
+	"\x14RefreshTokenResponse\x12!\n" +
+	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
+	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\"4\n" +
+	"\rLogoutRequest\x12#\n" +
+	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\"*\n" +
+	"\x0eLogoutResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x87\x01\n" +
 	"\x16CheckPermissionRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1f\n" +
@@ -264,9 +457,11 @@ const file_api_grpc_auth_v1_auth_proto_rawDesc = "" +
 	"resourceId\x12\x16\n" +
 	"\x06action\x18\x04 \x01(\tR\x06action\"3\n" +
 	"\x17CheckPermissionResponse\x12\x18\n" +
-	"\aallowed\x18\x01 \x01(\bR\aallowed2\xbf\x01\n" +
+	"\aallowed\x18\x01 \x01(\bR\aallowed2\xeb\x02\n" +
 	"\vAuthService\x12H\n" +
-	"\x05Login\x12\x1e.api.grpc.auth.v1.LoginRequest\x1a\x1f.api.grpc.auth.v1.LoginResponse\x12f\n" +
+	"\x05Login\x12\x1e.api.grpc.auth.v1.LoginRequest\x1a\x1f.api.grpc.auth.v1.LoginResponse\x12]\n" +
+	"\fRefreshToken\x12%.api.grpc.auth.v1.RefreshTokenRequest\x1a&.api.grpc.auth.v1.RefreshTokenResponse\x12K\n" +
+	"\x06Logout\x12\x1f.api.grpc.auth.v1.LogoutRequest\x1a .api.grpc.auth.v1.LogoutResponse\x12f\n" +
 	"\x0fCheckPermission\x12(.api.grpc.auth.v1.CheckPermissionRequest\x1a).api.grpc.auth.v1.CheckPermissionResponseB\x06Z\x04pkg/b\x06proto3"
 
 var (
@@ -281,20 +476,28 @@ func file_api_grpc_auth_v1_auth_proto_rawDescGZIP() []byte {
 	return file_api_grpc_auth_v1_auth_proto_rawDescData
 }
 
-var file_api_grpc_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_api_grpc_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_api_grpc_auth_v1_auth_proto_goTypes = []any{
 	(*LoginRequest)(nil),            // 0: api.grpc.auth.v1.LoginRequest
 	(*LoginResponse)(nil),           // 1: api.grpc.auth.v1.LoginResponse
-	(*CheckPermissionRequest)(nil),  // 2: api.grpc.auth.v1.CheckPermissionRequest
-	(*CheckPermissionResponse)(nil), // 3: api.grpc.auth.v1.CheckPermissionResponse
+	(*RefreshTokenRequest)(nil),     // 2: api.grpc.auth.v1.RefreshTokenRequest
+	(*RefreshTokenResponse)(nil),    // 3: api.grpc.auth.v1.RefreshTokenResponse
+	(*LogoutRequest)(nil),           // 4: api.grpc.auth.v1.LogoutRequest
+	(*LogoutResponse)(nil),          // 5: api.grpc.auth.v1.LogoutResponse
+	(*CheckPermissionRequest)(nil),  // 6: api.grpc.auth.v1.CheckPermissionRequest
+	(*CheckPermissionResponse)(nil), // 7: api.grpc.auth.v1.CheckPermissionResponse
 }
 var file_api_grpc_auth_v1_auth_proto_depIdxs = []int32{
 	0, // 0: api.grpc.auth.v1.AuthService.Login:input_type -> api.grpc.auth.v1.LoginRequest
-	2, // 1: api.grpc.auth.v1.AuthService.CheckPermission:input_type -> api.grpc.auth.v1.CheckPermissionRequest
-	1, // 2: api.grpc.auth.v1.AuthService.Login:output_type -> api.grpc.auth.v1.LoginResponse
-	3, // 3: api.grpc.auth.v1.AuthService.CheckPermission:output_type -> api.grpc.auth.v1.CheckPermissionResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
+	2, // 1: api.grpc.auth.v1.AuthService.RefreshToken:input_type -> api.grpc.auth.v1.RefreshTokenRequest
+	4, // 2: api.grpc.auth.v1.AuthService.Logout:input_type -> api.grpc.auth.v1.LogoutRequest
+	6, // 3: api.grpc.auth.v1.AuthService.CheckPermission:input_type -> api.grpc.auth.v1.CheckPermissionRequest
+	1, // 4: api.grpc.auth.v1.AuthService.Login:output_type -> api.grpc.auth.v1.LoginResponse
+	3, // 5: api.grpc.auth.v1.AuthService.RefreshToken:output_type -> api.grpc.auth.v1.RefreshTokenResponse
+	5, // 6: api.grpc.auth.v1.AuthService.Logout:output_type -> api.grpc.auth.v1.LogoutResponse
+	7, // 7: api.grpc.auth.v1.AuthService.CheckPermission:output_type -> api.grpc.auth.v1.CheckPermissionResponse
+	4, // [4:8] is the sub-list for method output_type
+	0, // [0:4] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -311,7 +514,7 @@ func file_api_grpc_auth_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_grpc_auth_v1_auth_proto_rawDesc), len(file_api_grpc_auth_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
