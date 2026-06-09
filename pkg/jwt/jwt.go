@@ -22,6 +22,9 @@ type TokenProvider struct {
 
 func (tp *TokenProvider) GetClaims(tokenString string) (*TokenClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &TokenClaims{}, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, fmt.Errorf("unexpected signature algorithm: %v", t.Header["alg"])
+		}
 		return tp.publicKey, nil
 	})
 	if err != nil || !token.Valid {

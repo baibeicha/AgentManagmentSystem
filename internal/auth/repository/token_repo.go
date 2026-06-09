@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"AgentManagmentSystem/pkg/config"
@@ -50,6 +49,14 @@ func (r *RedisTokenRepository) makeKey(tenantId, userId, deviceId string) string
 	return fmt.Sprintf("auth:tenant:%s:user:%s:session:%s", tenantId, userId, deviceId)
 }
 
+func (r *RedisTokenRepository) userSessionsKey(tenantId, userId string) string {
+	return fmt.Sprintf("auth:tenant:%s:user:%s:sessions", tenantId, userId)
+}
+
+func (r *RedisTokenRepository) tenantUsersKey(tenantId string) string {
+	return fmt.Sprintf("auth:tenant:%s:users", tenantId)
+}
+
 func (r *RedisTokenRepository) SaveToWhiteList(ctx context.Context,
 	tokenString, tenantId, userId, deviceId, ip, userAgent string) error {
 	now := time.Now()
@@ -69,26 +76,64 @@ func (r *RedisTokenRepository) SaveToWhiteList(ctx context.Context,
 
 	key := r.makeKey(tenantId, userId, deviceId)
 
-	return r.client.Set(ctx, key, data, r.ttl).Err()
+	pipe := r.client.Pipeline()
+	pipe.Set(ctx, key, data, r.ttl)
+	pipe.SAdd(ctx, r.userSessionsKey(tenantId, userId), deviceId)
+	pipe.SAdd(ctx, r.tenantUsersKey(tenantId), userId)
+
+	_, err = pipe.Exec(ctx)
+	return err
 }
+
+var rotateScript = redis.NewScript(`
+	local session = redis.call("GET", KEYS[1])
+	if not session then return "ERR_NOT_FOUND" end
+
+	local decoded = cjson.decode(session)
+	if decoded.token_hash ~= ARGV[1] then
+		return "ERR_REUSE"
+	end
+
+	redis.call("SET", KEYS[1], ARGV[2], "EX", ARGV[3])
+	return "OK"
+`)
 
 func (r *RedisTokenRepository) VerifyAndRotate(ctx context.Context,
 	oldToken, newToken, tenantId, userId, deviceId, ip, userAgent string) error {
 	key := r.makeKey(tenantId, userId, deviceId)
 
-	val, err := r.client.Get(ctx, key).Result()
-	if errors.Is(err, redis.Nil) {
+	now := time.Now()
+	newSession := SessionMetadata{
+		TokenHash: r.hashToken(newToken),
+		IP:        ip,
+		UserAgent: userAgent,
+		CreatedAt: now,
+		ExpiresAt: now.Add(r.ttl),
+	}
+
+	newData, err := json.Marshal(newSession)
+	if err != nil {
+		return fmt.Errorf("failed to marshal new session metadata: %w", err)
+	}
+
+	oldHash := r.hashToken(oldToken)
+	ttlSec := int(r.ttl.Seconds())
+
+	result, err := rotateScript.Run(ctx, r.client, []string{key}, oldHash, string(newData), ttlSec).Result()
+	if err != nil {
+		return fmt.Errorf("failed to execute rotate script: %w", err)
+	}
+
+	resStr, ok := result.(string)
+	if !ok {
+		return fmt.Errorf("unexpected script result type")
+	}
+
+	if resStr == "ERR_NOT_FOUND" {
 		return fmt.Errorf("session not found or expired")
-	} else if err != nil {
-		return err
 	}
 
-	var session SessionMetadata
-	if err := json.Unmarshal([]byte(val), &session); err != nil {
-		return err
-	}
-
-	if session.TokenHash != r.hashToken(oldToken) {
+	if resStr == "ERR_REUSE" {
 		err := r.RevokeAllUserSessions(ctx, tenantId, userId)
 		if err != nil {
 			return fmt.Errorf("SECURITY ALERT: token reuse detected, error while revoking sessions: %w", err)
@@ -96,73 +141,89 @@ func (r *RedisTokenRepository) VerifyAndRotate(ctx context.Context,
 		return fmt.Errorf("SECURITY ALERT: token reuse detected, all sessions revoked")
 	}
 
-	return r.SaveToWhiteList(ctx, newToken, tenantId, userId, deviceId, ip, userAgent)
+	return nil
 }
 
 func (r *RedisTokenRepository) RevokeSession(ctx context.Context, tenantId, userId, deviceId string) error {
 	key := r.makeKey(tenantId, userId, deviceId)
-	return r.client.Del(ctx, key).Err()
+
+	pipe := r.client.Pipeline()
+	pipe.Del(ctx, key)
+	pipe.SRem(ctx, r.userSessionsKey(tenantId, userId), deviceId)
+	_, err := pipe.Exec(ctx)
+
+	return err
 }
 
 func (r *RedisTokenRepository) GetActiveSessions(ctx context.Context, tenantId, userId string) (map[string]SessionMetadata, error) {
-	pattern := fmt.Sprintf("auth:tenant:%s:user:%s:session:*", tenantId, userId)
-	sessions := make(map[string]SessionMetadata)
+	deviceIds, err := r.client.SMembers(ctx, r.userSessionsKey(tenantId, userId)).Result()
+	if err != nil {
+		return nil, err
+	}
 
-	iter := r.client.Scan(ctx, 0, pattern, 0).Iterator()
-	for iter.Next(ctx) {
-		key := iter.Val()
-		val, err := r.client.Get(ctx, key).Result()
+	sessions := make(map[string]SessionMetadata)
+	if len(deviceIds) == 0 {
+		return sessions, nil
+	}
+
+	pipe := r.client.Pipeline()
+	var cmds []*redis.StringCmd
+	for _, deviceId := range deviceIds {
+		key := r.makeKey(tenantId, userId, deviceId)
+		cmds = append(cmds, pipe.Get(ctx, key))
+	}
+
+	_, _ = pipe.Exec(ctx) // Ignore pipeline execution errors as some keys might have expired naturally
+
+	for i, cmd := range cmds {
+		val, err := cmd.Result()
 		if err == nil {
 			var meta SessionMetadata
 			if json.Unmarshal([]byte(val), &meta) == nil {
-				parts := strings.Split(key, ":")
-				if len(parts) >= 7 {
-					deviceId := parts[6]
-					sessions[deviceId] = meta
-				}
+				sessions[deviceIds[i]] = meta
 			}
+		} else if errors.Is(err, redis.Nil) {
+			// Clean up expired session from the set
+			r.client.SRem(ctx, r.userSessionsKey(tenantId, userId), deviceIds[i])
 		}
 	}
 
-	if err := iter.Err(); err != nil {
-		return nil, err
-	}
 	return sessions, nil
 }
 
 func (r *RedisTokenRepository) RevokeAllUserSessions(ctx context.Context, tenantId, userId string) error {
-	pattern := fmt.Sprintf("auth:tenant:%s:user:%s:session:*", tenantId, userId)
-	return r.deleteByPattern(ctx, pattern)
-}
-
-func (r *RedisTokenRepository) RevokeTenantSessions(ctx context.Context, tenantId string) error {
-	pattern := fmt.Sprintf("auth:tenant:%s:user:*:session:*", tenantId)
-	return r.deleteByPattern(ctx, pattern)
-}
-
-func (r *RedisTokenRepository) deleteByPattern(ctx context.Context, pattern string) error {
-	iter := r.client.Scan(ctx, 0, pattern, 0).Iterator()
-	var keys []string
-
-	for iter.Next(ctx) {
-		keys = append(keys, iter.Val())
-
-		if len(keys) >= 100 {
-			if err := r.client.Del(ctx, keys...).Err(); err != nil {
-				return err
-			}
-			keys = keys[:0]
-		}
-	}
-
-	if err := iter.Err(); err != nil {
+	deviceIds, err := r.client.SMembers(ctx, r.userSessionsKey(tenantId, userId)).Result()
+	if err != nil {
 		return err
 	}
 
-	if len(keys) > 0 {
-		if err := r.client.Del(ctx, keys...).Err(); err != nil {
+	if len(deviceIds) == 0 {
+		return nil
+	}
+
+	pipe := r.client.Pipeline()
+	for _, deviceId := range deviceIds {
+		key := r.makeKey(tenantId, userId, deviceId)
+		pipe.Del(ctx, key)
+	}
+	pipe.Del(ctx, r.userSessionsKey(tenantId, userId))
+
+	_, err = pipe.Exec(ctx)
+	return err
+}
+
+func (r *RedisTokenRepository) RevokeTenantSessions(ctx context.Context, tenantId string) error {
+	userIds, err := r.client.SMembers(ctx, r.tenantUsersKey(tenantId)).Result()
+	if err != nil {
+		return err
+	}
+
+	for _, userId := range userIds {
+		err := r.RevokeAllUserSessions(ctx, tenantId, userId)
+		if err != nil {
 			return err
 		}
 	}
-	return nil
+
+	return r.client.Del(ctx, r.tenantUsersKey(tenantId)).Err()
 }
