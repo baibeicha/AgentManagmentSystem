@@ -12,12 +12,12 @@ import (
 )
 
 type TokenProvider struct {
+	log        *slog.Logger
 	privateKey *rsa.PrivateKey
 	publicKey  *rsa.PublicKey
 	repo       TokenRepository
 	accessTTL  time.Duration
 	refreshTTL time.Duration
-	log        slog.Logger
 }
 
 func (tp *TokenProvider) GetClaims(tokenString string) (*TokenClaims, error) {
@@ -30,7 +30,7 @@ func (tp *TokenProvider) GetClaims(tokenString string) (*TokenClaims, error) {
 	return token.Claims.(*TokenClaims), nil
 }
 
-func NewJwtTokenProvider(cfg *config.Config, log slog.Logger, repo TokenRepository, accessTTL, refreshTTL time.Duration) (*TokenProvider, error) {
+func NewTokenProvider(cfg *config.Config, log *slog.Logger, repo TokenRepository, accessTTL, refreshTTL time.Duration) (*TokenProvider, error) {
 	privBytes, err := os.ReadFile(cfg.GetString("jwt.private_key_path"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read private key: %w", err)

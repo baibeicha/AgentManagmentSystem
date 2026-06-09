@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -9,9 +10,9 @@ import (
 )
 
 type TokenRepository interface {
-	IsTokenValid(tokenString string) bool
-	SaveToWhiteList(tokenString, userID string) error
-	RevokeToken(tokenString string) error
+	SaveToWhiteList(ctx context.Context, tokenString, tenantId, userId, deviceId, ip, userAgent string) error
+	VerifyAndRotate(ctx context.Context, oldToken, newToken, tenantId, userId, deviceId, ip, userAgent string) error
+	RevokeSession(ctx context.Context, tenantId, userId, deviceId string) error
 }
 
 type Tokens struct {
@@ -23,6 +24,7 @@ type TokenClaims struct {
 	Username   string `json:"username"`
 	TenantID   string `json:"tid"`
 	GlobalRole string `json:"rol"`
+	DeviceID   string `json:"did"`
 	jwt.RegisteredClaims
 }
 
@@ -33,11 +35,12 @@ type UserDetails interface {
 	GetRole() string
 }
 
-func (tp *TokenProvider) GenerateAccess(user UserDetails) (string, error) {
+func (tp *TokenProvider) GenerateAccess(user UserDetails, deviceID string) (string, error) {
 	claims := TokenClaims{
 		Username:   user.GetUsername(),
 		TenantID:   user.GetTenantID(),
 		GlobalRole: user.GetRole(),
+		DeviceID:   deviceID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    user.GetID(),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tp.accessTTL)),
@@ -49,11 +52,12 @@ func (tp *TokenProvider) GenerateAccess(user UserDetails) (string, error) {
 	return token.SignedString(tp.privateKey)
 }
 
-func (tp *TokenProvider) GenerateRefresh(user UserDetails) (string, error) {
+func (tp *TokenProvider) GenerateRefresh(user UserDetails, deviceID string) (string, error) {
 	claims := TokenClaims{
 		Username:   user.GetUsername(),
 		TenantID:   user.GetTenantID(),
 		GlobalRole: user.GetRole(),
+		DeviceID:   deviceID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    user.GetID(),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tp.refreshTTL)),
@@ -65,20 +69,20 @@ func (tp *TokenProvider) GenerateRefresh(user UserDetails) (string, error) {
 	return token.SignedString(tp.privateKey)
 }
 
-func (tp *TokenProvider) GenerateTokens(user UserDetails) (*Tokens, error) {
-	accessToken, err := tp.GenerateAccess(user)
+func (tp *TokenProvider) GenerateTokens(ctx context.Context, user UserDetails, deviceID, ip, userAgent string) (*Tokens, error) {
+	accessToken, err := tp.GenerateAccess(user, deviceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
-	refreshToken, err := tp.GenerateRefresh(user)
+	refreshToken, err := tp.GenerateRefresh(user, deviceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
 
-	err = tp.repo.SaveToWhiteList(refreshToken, user.GetID())
+	err = tp.repo.SaveToWhiteList(ctx, refreshToken, user.GetTenantID(), user.GetID(), deviceID, ip, userAgent)
 	if err != nil {
-		return nil, fmt.Errorf("failed to save refresh token to whitelist: %w", err)
+		return nil, fmt.Errorf("failed to save session to whitelist: %w", err)
 	}
 
 	return &Tokens{
@@ -87,13 +91,12 @@ func (tp *TokenProvider) GenerateTokens(user UserDetails) (*Tokens, error) {
 	}, nil
 }
 
-func (tp *TokenProvider) VerifyToken(tokenString string) (bool, error) {
+func (tp *TokenProvider) ParseAndVerify(tokenString string) (*TokenClaims, error) {
 	if tokenString == "" {
-		return false, nil
+		return nil, errors.New("empty token string")
 	}
 
 	claims := &TokenClaims{}
-
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signature algorithm: %v", t.Header["alg"])
@@ -102,71 +105,71 @@ func (tp *TokenProvider) VerifyToken(tokenString string) (bool, error) {
 	})
 
 	if err != nil {
-		return false, fmt.Errorf("failed to parse token: %w", err)
+		return nil, fmt.Errorf("failed to parse token: %w", err)
 	}
 
-	if !tp.repo.IsTokenValid(tokenString) {
-		return false, errors.New("token is not valid or has been revoked")
+	if !token.Valid {
+		return nil, errors.New("token is not valid")
 	}
 
-	return token.Valid, nil
+	return claims, nil
 }
 
-func (tp *TokenProvider) RefreshToken(refreshToken string, user UserDetails) (*Tokens, error) {
-	isValid, err := tp.VerifyToken(refreshToken)
+func (tp *TokenProvider) RefreshTokens(ctx context.Context, oldRefreshToken string, user UserDetails, ip, userAgent string) (*Tokens, error) {
+	claims, err := tp.ParseAndVerify(oldRefreshToken)
 	if err != nil {
-		return nil, fmt.Errorf("invalid refresh token: %w", err)
-	}
-	if !isValid {
-		return nil, errors.New("refresh token is not valid")
+		return nil, fmt.Errorf("invalid old refresh token: %w", err)
 	}
 
-	var claims TokenClaims
-	_, err = jwt.ParseWithClaims(refreshToken, &claims, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, fmt.Errorf("unexpected signature algorithm: %v", t.Header["alg"])
-		}
+	deviceID := claims.DeviceID
+	if deviceID == "" {
+		return nil, errors.New("token claims do not contain device ID")
+	}
+
+	newAccessToken, err := tp.GenerateAccess(user, deviceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate new access token: %w", err)
+	}
+
+	newRefreshToken, err := tp.GenerateRefresh(user, deviceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate new refresh token: %w", err)
+	}
+
+	err = tp.repo.VerifyAndRotate(ctx, oldRefreshToken, newRefreshToken, user.GetTenantID(), user.GetID(), deviceID, ip, userAgent)
+	if err != nil {
+		tp.log.Warn("token rotation failed (possible theft attempt)",
+			"user_id", user.GetID(),
+			"device_id", deviceID,
+			"error", err,
+		)
+		return nil, fmt.Errorf("session rotation failed: %w", err)
+	}
+
+	return &Tokens{
+		AccessToken:  newAccessToken,
+		RefreshToken: newRefreshToken,
+	}, nil
+}
+
+func (tp *TokenProvider) DeleteToken(ctx context.Context, refreshToken string) error {
+	claims := &TokenClaims{}
+	_, err := jwt.ParseWithClaims(refreshToken, claims, func(t *jwt.Token) (interface{}, error) {
 		return tp.publicKey, nil
 	})
 
-	if err != nil {
-		return nil, fmt.Errorf("invalid refresh token: %w", err)
-	}
-
-	err = tp.repo.RevokeToken(refreshToken)
-
-	if err != nil {
-		tp.log.Warn("failed to revoke refresh token: ", "err", err)
-	}
-
-	return tp.GenerateTokens(user)
-}
-
-func (tp *TokenProvider) DeleteToken(refreshToken string) error {
-	token, err := jwt.ParseWithClaims(refreshToken, &TokenClaims{}, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, fmt.Errorf("unexpected signature algorithm: %v", t.Header["alg"])
-		}
-		return tp.publicKey, nil
-	})
-
-	if err != nil {
+	if err != nil && !errors.Is(err, jwt.ErrTokenExpired) {
 		return fmt.Errorf("failed to parse token for deletion: %w", err)
 	}
 
-	claims, ok := token.Claims.(*TokenClaims)
-	if !ok {
-		return errors.New("invalid token claims")
+	userID, _ := claims.GetIssuer()
+	if userID == "" || claims.TenantID == "" || claims.DeviceID == "" {
+		return errors.New("token misses required session identifiers (uid, tid, did)")
 	}
 
-	userID, err := claims.GetIssuer()
-	if err != nil || userID == "" {
-		return errors.New("failed to get user ID from token")
-	}
-
-	err = tp.repo.RevokeToken(refreshToken)
+	err = tp.repo.RevokeSession(ctx, claims.TenantID, userID, claims.DeviceID)
 	if err != nil {
-		return fmt.Errorf("error revoking token: %w", err)
+		return fmt.Errorf("error revoking token session: %w", err)
 	}
 
 	return nil
