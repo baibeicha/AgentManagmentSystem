@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS group_policies;
+DROP TABLE IF EXISTS hosts;
+DROP TABLE IF EXISTS host_groups;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS tenants;
