@@ -3,10 +3,11 @@ package domain
 import "time"
 
 type User struct {
-	UserID string
-	Email  string
-	Role   string
-	Status string
+	UserID   string
+	Email    string
+	Role     string
+	Status   string
+	TenantID string
 }
 
 type Device struct {

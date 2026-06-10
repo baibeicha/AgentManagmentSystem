@@ -22,7 +22,13 @@ const (
 	AuthService_Login_FullMethodName           = "/api.grpc.auth.v1.AuthService/Login"
 	AuthService_RefreshToken_FullMethodName    = "/api.grpc.auth.v1.AuthService/RefreshToken"
 	AuthService_Logout_FullMethodName          = "/api.grpc.auth.v1.AuthService/Logout"
+	AuthService_ValidateToken_FullMethodName   = "/api.grpc.auth.v1.AuthService/ValidateToken"
+	AuthService_GetMe_FullMethodName           = "/api.grpc.auth.v1.AuthService/GetMe"
 	AuthService_CheckPermission_FullMethodName = "/api.grpc.auth.v1.AuthService/CheckPermission"
+	AuthService_GetPermissions_FullMethodName  = "/api.grpc.auth.v1.AuthService/GetPermissions"
+	AuthService_Setup2FA_FullMethodName        = "/api.grpc.auth.v1.AuthService/Setup2FA"
+	AuthService_Verify2FA_FullMethodName       = "/api.grpc.auth.v1.AuthService/Verify2FA"
+	AuthService_Disable2FA_FullMethodName      = "/api.grpc.auth.v1.AuthService/Disable2FA"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -32,7 +38,13 @@ type AuthServiceClient interface {
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error)
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
+	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
+	GetMe(ctx context.Context, in *GetMeRequest, opts ...grpc.CallOption) (*UserResponse, error)
 	CheckPermission(ctx context.Context, in *CheckPermissionRequest, opts ...grpc.CallOption) (*CheckPermissionResponse, error)
+	GetPermissions(ctx context.Context, in *GetPermissionsRequest, opts ...grpc.CallOption) (*GetPermissionsResponse, error)
+	Setup2FA(ctx context.Context, in *Setup2FARequest, opts ...grpc.CallOption) (*Setup2FAResponse, error)
+	Verify2FA(ctx context.Context, in *Verify2FARequest, opts ...grpc.CallOption) (*Verify2FAResponse, error)
+	Disable2FA(ctx context.Context, in *Disable2FARequest, opts ...grpc.CallOption) (*Disable2FAResponse, error)
 }
 
 type authServiceClient struct {
@@ -73,10 +85,70 @@ func (c *authServiceClient) Logout(ctx context.Context, in *LogoutRequest, opts 
 	return out, nil
 }
 
+func (c *authServiceClient) ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidateTokenResponse)
+	err := c.cc.Invoke(ctx, AuthService_ValidateToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) GetMe(ctx context.Context, in *GetMeRequest, opts ...grpc.CallOption) (*UserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UserResponse)
+	err := c.cc.Invoke(ctx, AuthService_GetMe_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authServiceClient) CheckPermission(ctx context.Context, in *CheckPermissionRequest, opts ...grpc.CallOption) (*CheckPermissionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CheckPermissionResponse)
 	err := c.cc.Invoke(ctx, AuthService_CheckPermission_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) GetPermissions(ctx context.Context, in *GetPermissionsRequest, opts ...grpc.CallOption) (*GetPermissionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPermissionsResponse)
+	err := c.cc.Invoke(ctx, AuthService_GetPermissions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) Setup2FA(ctx context.Context, in *Setup2FARequest, opts ...grpc.CallOption) (*Setup2FAResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Setup2FAResponse)
+	err := c.cc.Invoke(ctx, AuthService_Setup2FA_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) Verify2FA(ctx context.Context, in *Verify2FARequest, opts ...grpc.CallOption) (*Verify2FAResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Verify2FAResponse)
+	err := c.cc.Invoke(ctx, AuthService_Verify2FA_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) Disable2FA(ctx context.Context, in *Disable2FARequest, opts ...grpc.CallOption) (*Disable2FAResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Disable2FAResponse)
+	err := c.cc.Invoke(ctx, AuthService_Disable2FA_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +162,13 @@ type AuthServiceServer interface {
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error)
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
+	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
+	GetMe(context.Context, *GetMeRequest) (*UserResponse, error)
 	CheckPermission(context.Context, *CheckPermissionRequest) (*CheckPermissionResponse, error)
+	GetPermissions(context.Context, *GetPermissionsRequest) (*GetPermissionsResponse, error)
+	Setup2FA(context.Context, *Setup2FARequest) (*Setup2FAResponse, error)
+	Verify2FA(context.Context, *Verify2FARequest) (*Verify2FAResponse, error)
+	Disable2FA(context.Context, *Disable2FARequest) (*Disable2FAResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -110,8 +188,26 @@ func (UnimplementedAuthServiceServer) RefreshToken(context.Context, *RefreshToke
 func (UnimplementedAuthServiceServer) Logout(context.Context, *LogoutRequest) (*LogoutResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Logout not implemented")
 }
+func (UnimplementedAuthServiceServer) ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ValidateToken not implemented")
+}
+func (UnimplementedAuthServiceServer) GetMe(context.Context, *GetMeRequest) (*UserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetMe not implemented")
+}
 func (UnimplementedAuthServiceServer) CheckPermission(context.Context, *CheckPermissionRequest) (*CheckPermissionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CheckPermission not implemented")
+}
+func (UnimplementedAuthServiceServer) GetPermissions(context.Context, *GetPermissionsRequest) (*GetPermissionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetPermissions not implemented")
+}
+func (UnimplementedAuthServiceServer) Setup2FA(context.Context, *Setup2FARequest) (*Setup2FAResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Setup2FA not implemented")
+}
+func (UnimplementedAuthServiceServer) Verify2FA(context.Context, *Verify2FARequest) (*Verify2FAResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Verify2FA not implemented")
+}
+func (UnimplementedAuthServiceServer) Disable2FA(context.Context, *Disable2FARequest) (*Disable2FAResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Disable2FA not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -188,6 +284,42 @@ func _AuthService_Logout_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_ValidateToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ValidateToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ValidateToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ValidateToken(ctx, req.(*ValidateTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_GetMe_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetMe(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetMe_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetMe(ctx, req.(*GetMeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthService_CheckPermission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CheckPermissionRequest)
 	if err := dec(in); err != nil {
@@ -202,6 +334,78 @@ func _AuthService_CheckPermission_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AuthServiceServer).CheckPermission(ctx, req.(*CheckPermissionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_GetPermissions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPermissionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetPermissions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetPermissions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetPermissions(ctx, req.(*GetPermissionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_Setup2FA_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Setup2FARequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).Setup2FA(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_Setup2FA_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).Setup2FA(ctx, req.(*Setup2FARequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_Verify2FA_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Verify2FARequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).Verify2FA(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_Verify2FA_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).Verify2FA(ctx, req.(*Verify2FARequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_Disable2FA_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Disable2FARequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).Disable2FA(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_Disable2FA_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).Disable2FA(ctx, req.(*Disable2FARequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -226,8 +430,32 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AuthService_Logout_Handler,
 		},
 		{
+			MethodName: "ValidateToken",
+			Handler:    _AuthService_ValidateToken_Handler,
+		},
+		{
+			MethodName: "GetMe",
+			Handler:    _AuthService_GetMe_Handler,
+		},
+		{
 			MethodName: "CheckPermission",
 			Handler:    _AuthService_CheckPermission_Handler,
+		},
+		{
+			MethodName: "GetPermissions",
+			Handler:    _AuthService_GetPermissions_Handler,
+		},
+		{
+			MethodName: "Setup2FA",
+			Handler:    _AuthService_Setup2FA_Handler,
+		},
+		{
+			MethodName: "Verify2FA",
+			Handler:    _AuthService_Verify2FA_Handler,
+		},
+		{
+			MethodName: "Disable2FA",
+			Handler:    _AuthService_Disable2FA_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -8,7 +8,16 @@ service AuthService {
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
   rpc Logout(LogoutRequest) returns (LogoutResponse);
+
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc GetMe(GetMeRequest) returns (UserResponse);
+
   rpc CheckPermission(CheckPermissionRequest) returns (CheckPermissionResponse);
+  rpc GetPermissions(GetPermissionsRequest) returns (GetPermissionsResponse);
+
+  rpc Setup2FA(Setup2FARequest) returns (Setup2FAResponse);
+  rpc Verify2FA(Verify2FARequest) returns (Verify2FAResponse);
+  rpc Disable2FA(Disable2FARequest) returns (Disable2FAResponse);
 }
 
 message LoginRequest {
@@ -39,6 +48,30 @@ message LogoutResponse {
   bool success = 1;
 }
 
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateTokenResponse {
+  string user_id = 1;
+  string email = 2;
+  string tenant_id = 3;
+  string role = 4;
+  string status = 5;
+}
+
+message GetMeRequest {
+  string user_id = 1;
+}
+
+message UserResponse {
+  string user_id = 1;
+  string email = 2;
+  string tenant_id = 3;
+  string role = 4;
+  string status = 5;
+}
+
 message CheckPermissionRequest {
   string user_id = 1;
   string tenant_id = 2;
@@ -48,4 +81,41 @@ message CheckPermissionRequest {
 
 message CheckPermissionResponse {
   bool allowed = 1;
+}
+
+message GetPermissionsRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+}
+
+message GetPermissionsResponse {
+  repeated string permissions = 1;
+}
+
+message Setup2FARequest {
+  string user_id = 1;
+}
+
+message Setup2FAResponse {
+  string secret = 1;
+  string otpauth_url = 2;
+}
+
+message Verify2FARequest {
+  string user_id = 1;
+  string code = 2;
+  string action_id = 3;
+}
+
+message Verify2FAResponse {
+  string status = 1;
+}
+
+message Disable2FARequest {
+  string user_id = 1;
+  string code = 2;
+}
+
+message Disable2FAResponse {
+  bool success = 1;
 }
