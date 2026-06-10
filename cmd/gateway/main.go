@@ -28,7 +28,7 @@ func main() {
 	}
 	defer logFile.Close()
 
-	r := router.SetupRouter(cfg, log)
+	r := router.SetupRouter(log)
 
 	serverPort := cfg.GetString("server.port")
 	if serverPort == "" {

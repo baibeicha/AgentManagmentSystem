@@ -129,11 +129,11 @@ func SetupLogger(env, levelStr, filename string) (*slog.Logger, *os.File, error)
 	handlers = append(handlers, consoleHandler)
 
 	var logFile *os.File
+	var err error
 	if filename != "" {
-		var err error
-		logFile, err = os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		logFile, err = os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		if err != nil {
-			return nil, nil, fmt.Errorf("can not open logs file: %w", err)
+			err = fmt.Errorf("can not open logs file: %w", err)
 		}
 
 		fileHandler := slog.NewJSONHandler(logFile, &slog.HandlerOptions{
@@ -147,5 +147,5 @@ func SetupLogger(env, levelStr, filename string) (*slog.Logger, *os.File, error)
 	logger := slog.New(ContextHandler{Handler: NewMultiHandler(handlers...)})
 	slog.SetDefault(logger)
 
-	return logger, logFile, nil
+	return logger, logFile, err
 }
