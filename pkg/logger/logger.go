@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -26,6 +27,50 @@ func (h ContextHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.Handler.Handle(ctx, r)
 }
 
+type MultiHandler struct {
+	handlers []slog.Handler
+}
+
+func NewMultiHandler(handlers ...slog.Handler) slog.Handler {
+	return &MultiHandler{handlers: handlers}
+}
+
+func (m *MultiHandler) Enabled(ctx context.Context, l slog.Level) bool {
+	for _, h := range m.handlers {
+		if h.Enabled(ctx, l) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *MultiHandler) Handle(ctx context.Context, r slog.Record) error {
+	for _, h := range m.handlers {
+		if h.Enabled(ctx, r.Level) {
+			if err := h.Handle(ctx, r); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (m *MultiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	handlers := make([]slog.Handler, len(m.handlers))
+	for i, h := range m.handlers {
+		handlers[i] = h.WithAttrs(attrs)
+	}
+	return &MultiHandler{handlers: handlers}
+}
+
+func (m *MultiHandler) WithGroup(name string) slog.Handler {
+	handlers := make([]slog.Handler, len(m.handlers))
+	for i, h := range m.handlers {
+		handlers[i] = h.WithGroup(name)
+	}
+	return &MultiHandler{handlers: handlers}
+}
+
 func SetLevel(levelStr string) {
 	switch strings.ToLower(levelStr) {
 	case "debug":
@@ -41,20 +86,16 @@ func SetLevel(levelStr string) {
 	}
 }
 
-func SetupLogger(env string, levelStr string) *slog.Logger {
+func SetupLogger(env, levelStr, filename string) (*slog.Logger, *os.File, error) {
 	SetLevel(levelStr)
 
-	var handler slog.Handler
+	var handlers []slog.Handler
 
-	if env == "production" || env == "prod" {
-		opts := &slog.HandlerOptions{
-			Level:     LogLevel,
-			AddSource: true,
-		}
-		handler = slog.NewJSONHandler(os.Stdout, opts)
-
+	var consoleHandler slog.Handler
+	if env == "production" {
+		consoleHandler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: LogLevel, AddSource: true})
 	} else {
-		opts := &slog.HandlerOptions{
+		consoleHandler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			Level: LogLevel,
 			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 				if a.Key == slog.TimeKey {
@@ -69,13 +110,13 @@ func SetupLogger(env string, levelStr string) *slog.Logger {
 					var color string
 					switch level {
 					case slog.LevelDebug:
-						color = "\033[36m"
+						color = "\033[36m" // Cyan
 					case slog.LevelInfo:
-						color = "\033[32m"
+						color = "\033[32m" // Green
 					case slog.LevelWarn:
-						color = "\033[33m"
+						color = "\033[33m" // Yellow
 					case slog.LevelError:
-						color = "\033[31m"
+						color = "\033[31m" // Red
 					default:
 						color = "\033[0m"
 					}
@@ -83,12 +124,28 @@ func SetupLogger(env string, levelStr string) *slog.Logger {
 				}
 				return a
 			},
+		})
+	}
+	handlers = append(handlers, consoleHandler)
+
+	var logFile *os.File
+	if filename != "" {
+		var err error
+		logFile, err = os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			return nil, nil, fmt.Errorf("can not open logs file: %w", err)
 		}
-		handler = slog.NewTextHandler(os.Stdout, opts)
+
+		fileHandler := slog.NewJSONHandler(logFile, &slog.HandlerOptions{
+			Level:     LogLevel,
+			AddSource: true,
+		})
+
+		handlers = append(handlers, fileHandler)
 	}
 
-	logger := slog.New(ContextHandler{Handler: handler})
+	logger := slog.New(ContextHandler{Handler: NewMultiHandler(handlers...)})
 	slog.SetDefault(logger)
 
-	return logger
+	return logger, logFile, nil
 }

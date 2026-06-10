@@ -14,12 +14,19 @@ import (
 )
 
 func main() {
-	cfg := config.MustLoad("gateway-config.yaml")
+	cfg := config.MustLoad("gateway-config")
 
-	log := logger.SetupLogger(
+	log, logFile, err := logger.SetupLogger(
 		cfg.GetString("log.type"),
 		cfg.GetString("log.level"),
+		cfg.GetString("log.path"),
 	)
+
+	if err != nil {
+		log.Error("can not setup logger", "err", err)
+		return
+	}
+	defer logFile.Close()
 
 	r := router.SetupRouter(cfg, log)
 

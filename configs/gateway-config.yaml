@@ -4,3 +4,4 @@ server:
 log:
   type: dev
   level: error
+  path: logs\gateway-log.txt
