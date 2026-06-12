@@ -8,6 +8,42 @@ servers:
     description: Local Development Server (API Gateway)
 paths:
   # --- AUTH & IAM DOMAIN ---
+  /api/v1/auth/register:
+    post:
+      tags:
+        - Auth & IAM
+      summary: User registration
+      description: Register a new user and returns a status (bool).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  example: admin_user
+                password:
+                  type: string
+                  format: password
+                  example: SuperSecureP@ssw0rd
+      responses:
+        '200':
+          description: Successful registration
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          description: User already exists
   /api/v1/auth/login:
     post:
       tags:

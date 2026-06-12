@@ -5,6 +5,8 @@ package api.grpc.auth.v1;
 option go_package = "pkg/";
 
 service AuthService {
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
   rpc Logout(LogoutRequest) returns (LogoutResponse);
@@ -18,6 +20,15 @@ service AuthService {
   rpc Setup2FA(Setup2FARequest) returns (Setup2FAResponse);
   rpc Verify2FA(Verify2FARequest) returns (Verify2FAResponse);
   rpc Disable2FA(Disable2FARequest) returns (Disable2FAResponse);
+}
+
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message RegisterResponse {
+  bool success = 1;
 }
 
 message LoginRequest {

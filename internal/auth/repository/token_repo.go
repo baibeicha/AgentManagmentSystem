@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"AgentManagmentSystem/pkg/jwt"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -30,7 +29,7 @@ type SessionMetadata struct {
 }
 
 func NewRedisTokenRepo(cfg *config.Config, client *redis.Client) *RedisTokenRepository {
-	ttlUnit := jwt.GetTimeUnit(cfg.GetString("jwt.ttl.unit"))
+	ttlUnit := config.GetTimeUnit(cfg.GetString("jwt.ttl.unit"))
 	refreshTTL := cfg.GetDuration("jwt.ttl.refresh") * ttlUnit
 
 	return &RedisTokenRepository{
@@ -173,7 +172,7 @@ func (r *RedisTokenRepository) GetActiveSessions(ctx context.Context, tenantId, 
 		cmds = append(cmds, pipe.Get(ctx, key))
 	}
 
-	_, _ = pipe.Exec(ctx) // Ignore pipeline execution errors as some keys might have expired naturally
+	_, _ = pipe.Exec(ctx)
 
 	for i, cmd := range cmds {
 		val, err := cmd.Result()

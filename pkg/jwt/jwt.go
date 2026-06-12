@@ -2,7 +2,7 @@ package jwt
 
 import (
 	"AgentManagmentSystem/pkg/config"
-	"crypto/rsa"
+	"crypto/ecdsa"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,8 +13,8 @@ import (
 
 type TokenProvider struct {
 	log        *slog.Logger
-	privateKey *rsa.PrivateKey
-	publicKey  *rsa.PublicKey
+	privateKey *ecdsa.PrivateKey
+	publicKey  *ecdsa.PublicKey
 	repo       TokenRepository
 	accessTTL  time.Duration
 	refreshTTL time.Duration
@@ -22,7 +22,7 @@ type TokenProvider struct {
 
 func (tp *TokenProvider) GetClaims(tokenString string) (*TokenClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &TokenClaims{}, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
+		if _, ok := t.Method.(*jwt.SigningMethodECDSA); !ok {
 			return nil, fmt.Errorf("unexpected signature algorithm: %v", t.Header["alg"])
 		}
 		return tp.publicKey, nil
@@ -34,20 +34,20 @@ func (tp *TokenProvider) GetClaims(tokenString string) (*TokenClaims, error) {
 }
 
 func NewTokenProvider(cfg *config.Config, log *slog.Logger, repo TokenRepository, accessTTL, refreshTTL time.Duration) (*TokenProvider, error) {
-	privBytes, err := os.ReadFile(cfg.GetString("jwt.private_key_path"))
+	privBytes, err := os.ReadFile(cfg.JWT.PrivateKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read private key: %w", err)
 	}
-	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privBytes)
+	privateKey, err := jwt.ParseECPrivateKeyFromPEM(privBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse private key: %w", err)
 	}
 
-	pubBytes, err := os.ReadFile(cfg.GetString("jwt.public_key_path"))
+	pubBytes, err := os.ReadFile(cfg.JWT.PublicKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read public key: %w", err)
 	}
-	publicKey, err := jwt.ParseRSAPublicKeyFromPEM(pubBytes)
+	publicKey, err := jwt.ParseECPublicKeyFromPEM(pubBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read public key: %w", err)
 	}
@@ -60,19 +60,4 @@ func NewTokenProvider(cfg *config.Config, log *slog.Logger, repo TokenRepository
 		refreshTTL: refreshTTL,
 		log:        log,
 	}, nil
-}
-
-func GetTimeUnit(unit string) time.Duration {
-	switch unit {
-	case "s":
-		return time.Second
-	case "m":
-		return time.Minute
-	case "h":
-		return time.Hour
-	case "d":
-		return time.Hour * 24
-	default:
-		return time.Minute
-	}
 }

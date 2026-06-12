@@ -34,6 +34,10 @@ func Connect(url, dbname, user, password, sslmode string) (*DB, error) {
 		return nil, fmt.Errorf("unable to create connection pool: %w", err)
 	}
 
+	if err := pool.Ping(ctx); err != nil {
+		return nil, fmt.Errorf("unable to connect database: %w", err)
+	}
+
 	return &DB{
 		Pool:       pool,
 		datasource: datasource,

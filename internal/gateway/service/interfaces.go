@@ -9,6 +9,7 @@ import (
 
 // AuthService handles user sessions, token issuance, and 2FA management.
 type AuthService interface {
+	Register(ctx context.Context, email, password string) (bool, error)
 	Login(ctx context.Context, login, password, deviceID string) (accessToken, refreshToken string, err error)
 	ValidateToken(ctx context.Context, accessToken string) (*domain.User, error)
 	RefreshToken(ctx context.Context, refreshToken string) (newAccess, newRefresh string, err error)

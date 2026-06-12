@@ -1,0 +1,36 @@
+app:
+  name: AMS
+
+grpc:
+  port: 50051
+  tls:
+    enabled: true
+    cert_path: "certs/server.crt"
+    key_path: "certs/server.key"
+
+datasource:
+  url: ${POSTGRES_URL}
+  db: ${POSTGRES_DB}
+  user: ${POSTGRES_USER}
+  password: ${POSTGRES_PASS}
+
+redis:
+  addr: ${REDIS_ADDR}
+
+superuser:
+  username: ${SUPERUSER_USERNAME}
+  email: ${SUPERUSER_EMAIL}
+  password: ${SUPERUSER_PASS}
+
+jwt:
+  ttl:
+    access: 1
+    refresh: 15
+    unit: m
+  private_key_path: "certs/private.pem"
+  public_key_path: "certs/public.pem"
+
+log:
+  type: dev
+  level: debug
+  path: logs\auth-log.txt

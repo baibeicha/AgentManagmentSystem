@@ -1,65 +1,59 @@
--- 1. Таблица организаций
 CREATE TABLE tenants
 (
-    id         BIGSERIAL PRIMARY KEY,
-    name       VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id         UUID PRIMARY KEY                  DEFAULT gen_random_uuid(),
+    name       VARCHAR(255)             NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Таблица пользователей
 CREATE TABLE users
 (
-    id            BIGSERIAL PRIMARY KEY,
-    tenant_id     BIGINT       NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
-    login         VARCHAR(255) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    global_role   VARCHAR(50)  NOT NULL    DEFAULT 'user',
-    created_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    id             UUID PRIMARY KEY                  DEFAULT gen_random_uuid(),
+    tenant_id      UUID                     NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
+    email          VARCHAR(255)             NOT NULL UNIQUE,
+    password_hash  VARCHAR(255)             NOT NULL,
+    role           VARCHAR(50)              NOT NULL DEFAULT 'VIEWER',
+    status         VARCHAR(50)              NOT NULL DEFAULT 'ACTIVE',
 
-    CONSTRAINT chk_global_role CHECK (global_role IN ('global_admin', 'tenant_admin', 'user'))
+    is_2fa_enabled BOOLEAN                  NOT NULL DEFAULT FALSE,
+    totp_secret    VARCHAR(255),
+
+    created_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_user_role CHECK (role IN ('TEAM_ADMIN', 'OPERATOR', 'VIEWER')),
+    CONSTRAINT chk_user_status CHECK (status IN ('ACTIVE', 'SUSPENDED', 'PENDING_INVITE'))
 );
 
 CREATE INDEX idx_users_tenant_id ON users (tenant_id);
+CREATE INDEX idx_users_email ON users (email);
 
--- 3. Группы устройств
-CREATE TABLE host_groups
+CREATE TABLE sessions
 (
-    id         BIGSERIAL PRIMARY KEY,
-    tenant_id  BIGINT       NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
-    name       VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-
-    UNIQUE (tenant_id, name)
+    id            UUID PRIMARY KEY                  DEFAULT gen_random_uuid(),
+    user_id       UUID                     NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    refresh_token VARCHAR(512)             NOT NULL UNIQUE,
+    device_id     VARCHAR(255),
+    client_ip     VARCHAR(45),
+    user_agent    TEXT,
+    is_revoked    BOOLEAN                  NOT NULL DEFAULT FALSE,
+    expires_at    TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_host_groups_tenant_id ON host_groups (tenant_id);
+CREATE INDEX idx_sessions_user_id ON sessions (user_id);
+CREATE INDEX idx_sessions_token ON sessions (refresh_token);
 
--- 4. Устройства (Агенты)
-CREATE TABLE hosts
+CREATE TABLE resource_policies
 (
-    id         BIGSERIAL PRIMARY KEY,
-    tenant_id  BIGINT       NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
-    group_id   BIGINT       REFERENCES host_groups (id) ON DELETE SET NULL,
-    hostname   VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id          UUID PRIMARY KEY                  DEFAULT gen_random_uuid(),
+    user_id     UUID                     NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    resource_id UUID                     NOT NULL,
+    action      VARCHAR(100)             NOT NULL,
+    created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE (user_id, resource_id, action)
 );
 
-CREATE INDEX idx_hosts_tenant_id ON hosts (tenant_id);
-CREATE INDEX idx_hosts_group_id ON hosts (group_id);
-
--- 5. Матрица гранулярных прав (RBAC)
-CREATE TABLE group_policies
-(
-    user_id    BIGINT       NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    group_id   BIGINT       NOT NULL REFERENCES host_groups (id) ON DELETE CASCADE,
-    permission VARCHAR(100) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-
-    PRIMARY KEY (user_id, group_id, permission)
-);
-
-CREATE INDEX idx_group_policies_user_id ON group_policies (user_id);
-CREATE INDEX idx_group_policies_group_id ON group_policies (group_id);
+CREATE INDEX idx_resource_policies_user_id ON resource_policies (user_id);
+CREATE INDEX idx_resource_policies_resource_id ON resource_policies (resource_id);

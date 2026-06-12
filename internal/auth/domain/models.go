@@ -1,43 +1,51 @@
 package domain
 
-import "time"
+import (
+	"time"
+)
 
+// Tenant represents an organization or isolated workspace
 type Tenant struct {
-	ID        int64
+	ID        string
 	Name      string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
+// User represents an identity within a Tenant
 type User struct {
-	ID           int64
-	TenantID     int64
-	Login        string
+	ID           string
+	TenantID     string
+	Email        string
 	PasswordHash string
-	GlobalRole   string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-}
+	Role         string
+	Status       string
 
-type HostGroup struct {
-	ID        int64
-	TenantID  int64
-	Name      string
-	CreatedAt time.Time
-}
+	Is2FAEnabled bool
+	TOTPSecret   string
 
-type Host struct {
-	ID        int64
-	TenantID  int64
-	GroupID   *int64
-	Hostname  string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
-type GroupPolicy struct {
-	UserID     int64
-	GroupID    int64
-	Permission string
+// Session represents an active Refresh Token lifecycle.
+type Session struct {
+	ID           string
+	UserID       string
+	RefreshToken string
+	DeviceID     string
+	ClientIP     string
+	UserAgent    string
+	IsRevoked    bool
+	ExpiresAt    time.Time
+	CreatedAt    time.Time
+}
+
+// ResourcePolicy replaces GroupPolicy.
+type ResourcePolicy struct {
+	ID         string
+	UserID     string
+	ResourceID string
+	Action     string
 	CreatedAt  time.Time
 }

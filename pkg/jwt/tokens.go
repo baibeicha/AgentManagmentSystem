@@ -48,7 +48,7 @@ func (tp *TokenProvider) GenerateAccess(user UserDetails, deviceID string) (stri
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
 	return token.SignedString(tp.privateKey)
 }
 
@@ -65,7 +65,7 @@ func (tp *TokenProvider) GenerateRefresh(user UserDetails, deviceID string) (str
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
 	return token.SignedString(tp.privateKey)
 }
 

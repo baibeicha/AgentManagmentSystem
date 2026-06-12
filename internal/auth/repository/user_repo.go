@@ -15,32 +15,53 @@ func NewUserRepository(db *storage.DB) *UserRepository {
 }
 
 func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
-	query := `INSERT INTO users (tenant_id, login, password_hash, global_role) VALUES ($1, $2, $3, $4) RETURNING id, created_at, updated_at`
-	return r.db.QueryRow(ctx, query, user.TenantID, user.Login, user.PasswordHash, user.GlobalRole).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
+	query := `
+		INSERT INTO users (tenant_id, email, password_hash, role, status, is_2fa_enabled, totp_secret) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7) 
+		RETURNING id, created_at, updated_at`
+
+	return r.db.QueryRow(
+		ctx, query,
+		user.TenantID, user.Email, user.PasswordHash, user.Role, user.Status, user.Is2FAEnabled, user.TOTPSecret,
+	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 }
 
-func (r *UserRepository) GetByID(ctx context.Context, id int64) (*domain.User, error) {
-	query := `SELECT id, tenant_id, login, password_hash, global_role, created_at, updated_at FROM users WHERE id = $1`
+func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
+	query := `
+		SELECT id, tenant_id, email, password_hash, role, status, is_2fa_enabled, COALESCE(totp_secret, ''), created_at, updated_at 
+		FROM users WHERE id = $1`
 	user := &domain.User{}
-	err := r.db.QueryRow(ctx, query, id).Scan(&user.ID, &user.TenantID, &user.Login, &user.PasswordHash, &user.GlobalRole, &user.CreatedAt, &user.UpdatedAt)
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&user.ID, &user.TenantID, &user.Email, &user.PasswordHash,
+		&user.Role, &user.Status, &user.Is2FAEnabled, &user.TOTPSecret,
+		&user.CreatedAt, &user.UpdatedAt,
+	)
 	if err != nil {
 		return nil, err
 	}
 	return user, nil
 }
 
-func (r *UserRepository) GetByLogin(ctx context.Context, login string) (*domain.User, error) {
-	query := `SELECT id, tenant_id, login, password_hash, global_role, created_at, updated_at FROM users WHERE login = $1`
+func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
+	query := `
+		SELECT id, tenant_id, email, password_hash, role, status, is_2fa_enabled, COALESCE(totp_secret, ''), created_at, updated_at 
+		FROM users WHERE email = $1`
 	user := &domain.User{}
-	err := r.db.QueryRow(ctx, query, login).Scan(&user.ID, &user.TenantID, &user.Login, &user.PasswordHash, &user.GlobalRole, &user.CreatedAt, &user.UpdatedAt)
+	err := r.db.QueryRow(ctx, query, email).Scan(
+		&user.ID, &user.TenantID, &user.Email, &user.PasswordHash,
+		&user.Role, &user.Status, &user.Is2FAEnabled, &user.TOTPSecret,
+		&user.CreatedAt, &user.UpdatedAt,
+	)
 	if err != nil {
 		return nil, err
 	}
 	return user, nil
 }
 
-func (r *UserRepository) GetByTenantID(ctx context.Context, tenantID int64) ([]*domain.User, error) {
-	query := `SELECT id, tenant_id, login, password_hash, global_role, created_at, updated_at FROM users WHERE tenant_id = $1`
+func (r *UserRepository) GetByTenantID(ctx context.Context, tenantID string) ([]*domain.User, error) {
+	query := `
+		SELECT id, tenant_id, email, password_hash, role, status, is_2fa_enabled, COALESCE(totp_secret, ''), created_at, updated_at 
+		FROM users WHERE tenant_id = $1`
 	rows, err := r.db.Query(ctx, query, tenantID)
 	if err != nil {
 		return nil, err
@@ -50,7 +71,11 @@ func (r *UserRepository) GetByTenantID(ctx context.Context, tenantID int64) ([]*
 	var users []*domain.User
 	for rows.Next() {
 		var user domain.User
-		if err := rows.Scan(&user.ID, &user.TenantID, &user.Login, &user.PasswordHash, &user.GlobalRole, &user.CreatedAt, &user.UpdatedAt); err != nil {
+		if err := rows.Scan(
+			&user.ID, &user.TenantID, &user.Email, &user.PasswordHash,
+			&user.Role, &user.Status, &user.Is2FAEnabled, &user.TOTPSecret,
+			&user.CreatedAt, &user.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		users = append(users, &user)
@@ -59,11 +84,17 @@ func (r *UserRepository) GetByTenantID(ctx context.Context, tenantID int64) ([]*
 }
 
 func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
-	query := `UPDATE users SET login = $1, password_hash = $2, global_role = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING updated_at`
-	return r.db.QueryRow(ctx, query, user.Login, user.PasswordHash, user.GlobalRole, user.ID).Scan(&user.UpdatedAt)
+	query := `
+		UPDATE users 
+		SET email = $1, password_hash = $2, role = $3, status = $4, is_2fa_enabled = $5, totp_secret = $6, updated_at = CURRENT_TIMESTAMP 
+		WHERE id = $7 RETURNING updated_at`
+	return r.db.QueryRow(
+		ctx, query,
+		user.Email, user.PasswordHash, user.Role, user.Status, user.Is2FAEnabled, user.TOTPSecret, user.ID,
+	).Scan(&user.UpdatedAt)
 }
 
-func (r *UserRepository) Delete(ctx context.Context, id int64) error {
+func (r *UserRepository) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM users WHERE id = $1`
 	_, err := r.db.Exec(ctx, query, id)
 	return err

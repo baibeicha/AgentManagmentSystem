@@ -1,8 +1,12 @@
 package main
 
 import (
+	"AgentManagmentSystem/internal/gateway/client/grpc"
+	"AgentManagmentSystem/internal/gateway/client/mock"
 	"AgentManagmentSystem/internal/gateway/delivery/http/router"
+	"AgentManagmentSystem/internal/gateway/delivery/http/router/handler"
 	"AgentManagmentSystem/pkg/config"
+	"AgentManagmentSystem/pkg/grpc/client"
 	"AgentManagmentSystem/pkg/logger"
 	"context"
 	"errors"
@@ -16,10 +20,11 @@ import (
 func main() {
 	cfg := config.MustLoad("gateway-config")
 
+	lotCfg := cfg.Log
 	log, logFile, err := logger.SetupLogger(
-		cfg.GetString("log.type"),
-		cfg.GetString("log.level"),
-		cfg.GetString("log.path"),
+		lotCfg.Type,
+		lotCfg.Level,
+		lotCfg.Path,
 	)
 
 	if err != nil {
@@ -28,7 +33,36 @@ func main() {
 	}
 	defer logFile.Close()
 
-	r := router.SetupRouter(log)
+	authGrpcClient, err := client.NewGrpcClient(cfg, log, "auth")
+	if err != nil {
+		log.Error("can not setup auth grpc client", "err", err)
+		return
+	}
+	defer authGrpcClient.Close()
+
+	deviceMock := mock.NewDeviceMock()
+	metricsMock := mock.NewMetricsMock()
+	commandMock := mock.NewCommandMock()
+	automationMock := mock.NewAutomationMock()
+	notificationMock := mock.NewNotificationMock()
+	incidentMock := mock.NewIncidentMock()
+	teamMock := mock.NewTeamMock()
+	auditMock := mock.NewAuditMock()
+
+	h := handler.NewGatewayHandlers(
+		grpc.NewAuthServiceClient(authGrpcClient, log),
+		deviceMock,
+		deviceMock,
+		metricsMock,
+		commandMock,
+		automationMock,
+		notificationMock,
+		incidentMock,
+		teamMock,
+		auditMock,
+	)
+
+	r := router.SetupRouter(log, h)
 
 	serverPort := cfg.GetString("server.port")
 	if serverPort == "" {

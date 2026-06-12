@@ -19,7 +19,7 @@ func (r *TenantRepository) Create(ctx context.Context, tenant *domain.Tenant) er
 	return r.db.QueryRow(ctx, query, tenant.Name).Scan(&tenant.ID, &tenant.CreatedAt, &tenant.UpdatedAt)
 }
 
-func (r *TenantRepository) GetByID(ctx context.Context, id int64) (*domain.Tenant, error) {
+func (r *TenantRepository) GetByID(ctx context.Context, id string) (*domain.Tenant, error) {
 	query := `SELECT id, name, created_at, updated_at FROM tenants WHERE id = $1`
 	tenant := &domain.Tenant{}
 	err := r.db.QueryRow(ctx, query, id).Scan(&tenant.ID, &tenant.Name, &tenant.CreatedAt, &tenant.UpdatedAt)
@@ -34,7 +34,7 @@ func (r *TenantRepository) Update(ctx context.Context, tenant *domain.Tenant) er
 	return r.db.QueryRow(ctx, query, tenant.Name, tenant.ID).Scan(&tenant.UpdatedAt)
 }
 
-func (r *TenantRepository) Delete(ctx context.Context, id int64) error {
+func (r *TenantRepository) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM tenants WHERE id = $1`
 	_, err := r.db.Exec(ctx, query, id)
 	return err

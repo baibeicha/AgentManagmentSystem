@@ -12,6 +12,13 @@ func NewAuthMock() *AuthMock {
 	return &AuthMock{}
 }
 
+func (m *AuthMock) Register(ctx context.Context, email, password string) (bool, error) {
+	if email == "" || password == "" {
+		return false, errors.New("invalid credentials")
+	}
+	return true, nil
+}
+
 func (m *AuthMock) Login(ctx context.Context, login, password, deviceID string) (string, string, error) {
 	if login == "" || password == "" {
 		return "", "", errors.New("invalid credentials")

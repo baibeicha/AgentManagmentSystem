@@ -1,7 +1,14 @@
+service:
+  auth:
+    addr: ${AUTH_SERVICE_ADDR}
+    port: ${AUTH_SERVICE_PORT}
+    trusted_cert: false
+    cert_path: "certs/server.crt"
+
 server:
   port: 8080
 
 log:
   type: dev
-  level: error
+  level: debug
   path: logs\gateway-log.txt

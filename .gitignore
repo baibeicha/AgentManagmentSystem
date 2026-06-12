@@ -30,3 +30,5 @@ out
 certs
 
 logs
+
+generate-certs
