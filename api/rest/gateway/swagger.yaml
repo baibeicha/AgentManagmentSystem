@@ -125,7 +125,7 @@ paths:
       summary: User logout
       description: Adds the current Access JWT to the Redis Blacklist and removes the active Refresh Token session.
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -156,7 +156,7 @@ paths:
         - Auth & IAM
       summary: Get current user profile
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Active session profile data
@@ -176,6 +176,60 @@ paths:
                   role:
                     type: string
                     example: TEAM_ADMIN
+    put:
+      tags:
+        - Auth & IAM
+      summary: Update current user profile
+      description: Allows the user to update their personal information and interface preferences.
+      security:
+        - BearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                login:
+                  type: string
+                  example: admin_user_updated
+                preferences:
+                  type: object
+                  properties:
+                    theme:
+                      type: string
+                      enum: [ dark, light, system ]
+      responses:
+        '200':
+          description: Profile updated successfully
+  /api/v1/auth/password:
+    put:
+      tags:
+        - Auth & IAM
+      summary: Change user password
+      security:
+        - BearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - current_password
+                - new_password
+              properties:
+                current_password:
+                  type: string
+                  format: password
+                new_password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Password successfully changed
+        '403':
+          description: Incorrect current password
   /api/v1/auth/permissions:
     get:
       tags:
@@ -183,7 +237,7 @@ paths:
       summary: Get user permissions
       description: Used by the frontend for reactive UI rendering based on RBAC policies.
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Array of allowed permissions
@@ -204,7 +258,7 @@ paths:
       summary: Initialize 2FA configuration
       description: Generates a TOTP secret and an otpauth:// URL for QR code rendering on the frontend.
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: TOTP secret generated successfully
@@ -226,7 +280,7 @@ paths:
       summary: Verify TOTP code for 2FA escalation
       description: Validates a 6-digit one-time password to authorize a dangerous action or scenario execution.
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -264,7 +318,7 @@ paths:
         - Auth & IAM
       summary: Disable 2FA protection
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -296,7 +350,7 @@ paths:
         - Inventory & Devices
       summary: List all registered organization hosts
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Array of managed devices
@@ -312,7 +366,7 @@ paths:
         - Inventory & Devices
       summary: Get detailed system specifications for a host
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -335,7 +389,7 @@ paths:
       summary: De-register device from monitoring
       description: Revokes agent mTLS certificates and deletes its metadata from the core database.
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -352,7 +406,7 @@ paths:
         - Inventory & Devices
       summary: Update device metadata (Alias, Group, Tags)
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -377,7 +431,7 @@ paths:
                   type: array
                   items:
                     type: string
-                  example: ["database", "linux", "critical"]
+                  example: [ "database", "linux", "critical" ]
       responses:
         '200':
           description: Metadata updated successfully
@@ -388,7 +442,7 @@ paths:
       summary: Generate a unique provisioning token
       description: Used by a fresh agent instance during its initial deployment to negotiate mTLS certificates.
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Bootstrap key generated
@@ -452,7 +506,7 @@ paths:
       summary: Trigger agent service remote update
       description: Instructs the agent to perform a hot-swap binary overwrite or execute a sidecar Docker container update.
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -478,7 +532,7 @@ paths:
         - Inventory & Devices
       summary: List logical device groups
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Array of groups
@@ -502,7 +556,7 @@ paths:
         - Inventory & Devices
       summary: Create a new device group
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -527,7 +581,7 @@ paths:
         - LAN Discovery
       summary: View hosts discovered on local networks
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Unmanaged local devices found by active agents
@@ -552,7 +606,7 @@ paths:
         - LAN Discovery
       summary: Approve candidate and start automated agent provisioning
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -568,7 +622,7 @@ paths:
         - LAN Discovery
       summary: Ignore discovered local device
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -591,13 +645,13 @@ paths:
           required: true
           schema:
             type: string
-            enum: [linux, windows, darwin]
+            enum: [ linux, windows, darwin ]
         - name: arch
           in: path
           required: true
           schema:
             type: string
-            enum: [amd64, arm64]
+            enum: [ amd64, arm64 ]
       responses:
         '200':
           description: Static agent executable file
@@ -631,7 +685,7 @@ paths:
         - Downloads & Release Management
       summary: Upload and publish a new agent release version (Admin only)
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -649,10 +703,10 @@ paths:
                   example: "v1.3.0"
                 os:
                   type: string
-                  enum: [linux, windows, darwin]
+                  enum: [ linux, windows, darwin ]
                 arch:
                   type: string
-                  enum: [amd64, arm64]
+                  enum: [ amd64, arm64 ]
                 file:
                   type: string
                   format: binary
@@ -667,7 +721,7 @@ paths:
         - Telemetry & Metrics
       summary: Fetch latest real-time resource utilization snapshot
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -703,7 +757,7 @@ paths:
       summary: Fetch historical timeseries metrics (TimescaleDB data)
       description: Returns data series to plot analytical dashboards.
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -716,7 +770,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [cpu, ram, disk, network]
+            enum: [ cpu, ram, disk, network ]
         - name: from
           in: query
           required: true
@@ -751,14 +805,14 @@ paths:
                       type: array
                       items:
                         type: string
-                      example: ["1717934400", "45.2"]
+                      example: [ "1717934400", "45.2" ]
   /api/v1/metrics/{id}/processes:
     get:
       tags:
         - Telemetry & Metrics
       summary: List current operating system active processes
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -788,6 +842,106 @@ paths:
                     ram_usage_bytes:
                       type: integer
                       example: 524288000
+  /api/v1/metrics/aggregated:
+    get:
+      tags:
+        - Telemetry & Metrics
+      summary: Fetch aggregated timeseries metrics across the fleet or specific group
+      description: Returns averaged or summed metrics (e.g., avg CPU or total network I/O) for plotting global dashboards. Aggregation is calculated on the database side (e.g., via TimescaleDB time buckets).
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: metric_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [ cpu, ram, disk, network ]
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: step
+          in: query
+          required: false
+          schema:
+            type: string
+            example: 5m
+        - name: group_id
+          in: query
+          required: false
+          description: Optional. If provided, aggregates metrics only for this specific logical device group. If omitted, aggregates across the entire organization.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Aggregated multidimensional timeseries array
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  metric:
+                    type: string
+                    example: cpu_avg
+                  values:
+                    type: array
+                    items:
+                      type: array
+                      items:
+                        type: string
+                      example: [ "1717934400", "45.2" ]
+  /api/v1/metrics/top:
+    get:
+      tags:
+        - Telemetry & Metrics
+      summary: Fetch top N most resource-exhausted devices
+      description: Returns a sorted array of devices experiencing the highest instantaneous load for a requested metric to highlight anomalies.
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: metric_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [ cpu, ram, disk, network ]
+        - name: limit
+          in: query
+          required: false
+          description: Number of devices to return (default 5).
+          schema:
+            type: integer
+            default: 5
+            maximum: 50
+      responses:
+        '200':
+          description: Array of top loaded devices with their current metric value
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    device_id:
+                      type: string
+                      format: uuid
+                    alias:
+                      type: string
+                      example: prod-db-replica-01
+                    value:
+                      type: number
+                      example: 98.5
 
   # --- COMMAND & CONTROL DOMAIN ---
   /api/v1/commands/execute:
@@ -797,7 +951,7 @@ paths:
       summary: Send isolated shell instruction to agent
       description: Validates commands against a server-side blacklist (Command Sanitize). Throws a 2FA challenge if critical policies are triggered.
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -848,7 +1002,7 @@ paths:
         - Command & Control
       summary: Retrieve playbook script templates library
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Script repository list
@@ -863,7 +1017,7 @@ paths:
         - Command & Control
       summary: Save reusable script template to automation library
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -879,7 +1033,7 @@ paths:
         - Command & Control
       summary: View script template content
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -899,7 +1053,7 @@ paths:
         - Command & Control
       summary: Update a script template
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -921,7 +1075,7 @@ paths:
         - Command & Control
       summary: Delete a script template from the library
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -941,7 +1095,7 @@ paths:
       summary: Open interactive duplex terminal reverse shell (P2P Stream)
       description: Upgrades protocol connection to WebSockets. Channels interactive shell raw stream mapped to host operating system pty.
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -959,7 +1113,7 @@ paths:
       summary: Main live metrics and system alert broadcast channel
       description: Channels a streaming feed of compressed telemetry batches directly to browser UI frames.
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '101':
           description: Connection established, live feed broadcasting active
@@ -971,7 +1125,7 @@ paths:
         - Automation & Alerts
       summary: List metric trigger threshold rules
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Alert definitions array
@@ -986,7 +1140,7 @@ paths:
         - Automation & Alerts
       summary: Register new resource utilization alert trigger
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -1002,7 +1156,7 @@ paths:
         - Automation & Alerts
       summary: Modify trigger threshold parameters or mute rule state
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -1024,7 +1178,7 @@ paths:
         - Automation & Alerts
       summary: Remove a metric trigger rule
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -1041,7 +1195,7 @@ paths:
         - Automation & Alerts
       summary: List self-healing state-machine workflows
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Automation graph structures listed
@@ -1050,7 +1204,7 @@ paths:
         - Automation & Alerts
       summary: Register a new self-healing playbook graph workflow
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -1076,7 +1230,7 @@ paths:
         - Automation & Alerts
       summary: Fetch a specific self-healing playbook graph workflow
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -1092,7 +1246,7 @@ paths:
         - Automation & Alerts
       summary: Update a self-healing playbook workflow
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -1114,7 +1268,7 @@ paths:
         - Automation & Alerts
       summary: Delete a self-healing playbook workflow
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -1131,7 +1285,7 @@ paths:
         - Automation & Alerts
       summary: List active background cron scheduled task definitions
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Automation scheduler routine jobs array
@@ -1140,7 +1294,7 @@ paths:
         - Automation & Alerts
       summary: Create periodic automation task definition with cron schedule expression
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -1170,7 +1324,7 @@ paths:
         - Automation & Alerts
       summary: Modify a cron task expression or target group
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -1192,7 +1346,7 @@ paths:
         - Automation & Alerts
       summary: Cancel and delete a cron task routine
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -1211,7 +1365,7 @@ paths:
         - Notification Configurations
       summary: List integrated alert notification channels (Telegram, Discord, Webhooks)
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Integrated communication channels
@@ -1226,7 +1380,7 @@ paths:
         - Notification Configurations
       summary: Connect a new alert dispatch target channel
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -1242,7 +1396,7 @@ paths:
         - Notification Configurations
       summary: Update a notification target connection configuration
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -1264,7 +1418,7 @@ paths:
         - Notification Configurations
       summary: Remove notification route integration channel
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -1275,6 +1429,57 @@ paths:
       responses:
         '200':
           description: Integration channel detached
+  /api/v1/notifications/in-app:
+    get:
+      tags:
+        - In-App Notifications
+      summary: Get recent system notifications for the current user
+      description: Feeds the right-side drawer UI with alerts and system messages.
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: unread_only
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Array of user notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InAppNotification'
+  /api/v1/notifications/in-app/{id}/read:
+    put:
+      tags:
+        - In-App Notifications
+      summary: Mark a specific notification as read
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Notification marked as read
+  /api/v1/notifications/in-app/read-all:
+    put:
+      tags:
+        - In-App Notifications
+      summary: Mark all unread notifications as read
+      security:
+        - BearerAuth: [ ]
+      responses:
+        '200':
+          description: All notifications marked as read
 
   # --- INCIDENT MANAGEMENT DOMAIN ---
   /api/v1/incidents/active:
@@ -1284,7 +1489,7 @@ paths:
       summary: Fetch unresolved infrastructural emergency violations list
       description: Returns out-of-bounds resources triggers and non-responsive heartbeats (Dead Man's Switch).
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Outstanding infrastructure incidents log
@@ -1300,7 +1505,7 @@ paths:
         - Incident Management
       summary: Acknowledge an open system incident violation
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -1317,7 +1522,7 @@ paths:
         - Incident Management
       summary: Force status resolution over active incident log
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -1336,7 +1541,7 @@ paths:
         - Team & User Management
       summary: View active membership roster inside organization tenant
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: User accounts roles registry listed
@@ -1345,7 +1550,7 @@ paths:
         - Team & User Management
       summary: Generate invitation token email dispatch for fresh teammate onboard
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Invitation link delivered
@@ -1355,7 +1560,7 @@ paths:
         - Team & User Management
       summary: Adjust logical groups access privileges over a single user
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -1373,7 +1578,7 @@ paths:
       summary: Revoke tenant user membership
       description: Places target credentials instantly inside the Redis session blacklist.
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -1392,7 +1597,7 @@ paths:
         - Core System & GitOps IaC
       summary: Read secure administrative action ledger trail
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Audit chain rows extracted
@@ -1403,7 +1608,7 @@ paths:
       summary: Execute SHA-256 cryptographic hash chaining verification
       description: Sweeps database log records computing integrity verification vectors to catch unauthorized raw database manipulation.
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Ledger verification report delivered
@@ -1424,7 +1629,7 @@ paths:
         - Core System & GitOps IaC
       summary: Dump complete tenant configuration rules to single IaC YAML file
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Infrastructure as Code declarative YAML template delivered
@@ -1438,7 +1643,7 @@ paths:
         - Core System & GitOps IaC
       summary: Sync active configurations from an external GitOps YAML manifest
       security:
-        - BearerAuth: []
+        - BearerAuth: [ ]
       responses:
         '200':
           description: Setup configurations adapted and merged smoothly
@@ -1520,7 +1725,7 @@ components:
           example: 192.168.1.50
         status:
           type: string
-          enum: [online, offline]
+          enum: [ online, offline ]
           example: online
         agent_version:
           type: string
@@ -1532,7 +1737,7 @@ components:
           type: array
           items:
             type: string
-          example: ["k8s", "prod"]
+          example: [ "k8s", "prod" ]
         last_heartbeat:
           type: string
           format: date-time
@@ -1556,7 +1761,7 @@ components:
           example: "#!/bin/bash\ndocker system prune -af"
         interpreter:
           type: string
-          enum: [bash, sh, powershell, cmd]
+          enum: [ bash, sh, powershell, cmd ]
           example: bash
     AlertRule:
       type: object
@@ -1574,11 +1779,11 @@ components:
           example: "High CPU Usage Alert"
         metric:
           type: string
-          enum: [cpu, ram, disk, network]
+          enum: [ cpu, ram, disk, network ]
           example: cpu
         operator:
           type: string
-          enum: [">", "<", "==", ">="]
+          enum: [ ">", "<", "==", ">=" ]
           example: ">"
         threshold:
           type: number
@@ -1605,7 +1810,7 @@ components:
           example: "DevOps Core Telegram Bot Chat"
         type:
           type: string
-          enum: [telegram, discord, webhook]
+          enum: [ telegram, discord, webhook ]
           example: telegram
         destination:
           type: string
@@ -1627,12 +1832,39 @@ components:
           example: "DEAD_MAN_SWITCH_TRIGGERED"
         severity:
           type: string
-          enum: [info, warning, critical]
+          enum: [ info, warning, critical ]
           example: critical
         status:
           type: string
-          enum: [OPEN, ACKNOWLEDGED, RESOLVED]
+          enum: [ OPEN, ACKNOWLEDGED, RESOLVED ]
           example: OPEN
         created_at:
           type: string
           format: date-time
+    InAppNotification:
+      type: object
+      properties:
+        notification_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: "High CPU Usage Detected"
+        message:
+          type: string
+          example: "Host prod-db-01 is experiencing 98% CPU load."
+        severity:
+          type: string
+          enum: [ info, warning, critical ]
+          example: critical
+        is_read:
+          type: boolean
+          example: false
+        created_at:
+          type: string
+          format: date-time
+        related_entity_id:
+          type: string
+          format: uuid
+          description: "Optional ID (e.g., incident_id or device_id) to redirect the user upon clicking."
+          nullable: true
