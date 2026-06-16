@@ -3,11 +3,8 @@
 import { Search, Bell, User, Activity, Database, Zap, HardDrive, LogOut, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import NotificationsDrawer from './notifications-drawer';
-
-// Mock active user role
-const ACTIVE_USER_ROLE = 'GLOBAL_ADMIN'; // Render conditionally based on this requirement.
+import useAuthStore from '@/hooks/useAuth';
 
 function AdminSystemStatus() {
   return (
@@ -52,11 +49,12 @@ function ServerStatusIcon({
 
 export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const router = useRouter();
 
-  const handleLogout = () => {
-    fetch('/api/v1/auth/logout', { method: 'POST' }).catch(() => {});
-    router.push('/login');
+  const logout = useAuthStore((state) => state.logout);
+  const profile = useAuthStore((state) => state.profile);
+
+  const handleLogout = async () => {
+    await logout();
   };
 
   return (
@@ -85,7 +83,7 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         </div>
 
         <div className="flex items-center gap-3 md:gap-6 text-zinc-400">
-          {ACTIVE_USER_ROLE === 'GLOBAL_ADMIN' && <AdminSystemStatus />}
+          {profile?.role === 'GLOBAL_ADMIN' && <AdminSystemStatus />}
 
           <button
             onClick={() => setIsNotificationsOpen(true)}
@@ -97,7 +95,7 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
 
           <button className="hidden sm:flex items-center justify-center h-8 w-8 rounded-full bg-zinc-900/40 border border-white/[0.08] hover:border-sky-500/50 transition-all active:scale-95 group overflow-hidden">
             <span className="text-xs font-bold text-zinc-300 group-hover:text-sky-400">
-              SYS
+              {profile?.login ? profile.login.substring(0, 3).toUpperCase() : 'SYS'}
             </span>
           </button>
           

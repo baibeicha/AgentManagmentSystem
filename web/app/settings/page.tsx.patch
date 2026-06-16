@@ -1,0 +1,11 @@
+--- web/app/settings/page.tsx
++++ web/app/settings/page.tsx
+@@ -89,8 +89,6 @@
+   useEffect(() => {
+     if (profile) {
+       setProfileForm(prev => ({ ...prev, login: profile.login }));
+     }
+-    // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [profile?.login]);
+
+   const handleProfileUpdate = async (e: React.FormEvent) => {

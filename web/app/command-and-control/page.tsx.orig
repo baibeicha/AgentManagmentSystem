@@ -23,13 +23,17 @@ export default function CommandAndControlPage() {
   ]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  
+
   const [newScriptForm, setNewScriptForm] = useState({ name: '', interpreter: 'bash', content: '' });
   const [targetDeviceId, setTargetDeviceId] = useState<string>('00000000-0000-0000-0000-000000000000'); // Default or placeholder
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const { accessToken } = useAuthStore();
+
+  useEffect(() => {
+    fetchScripts();
+  }, []);
 
   useEffect(() => {
     if (terminalEndRef.current) {
@@ -45,10 +49,6 @@ export default function CommandAndControlPage() {
       console.error('Failed to fetch scripts', err);
     }
   };
-
-  useEffect(() => {
-    fetchScripts();
-  }, []);
 
   const connectWebSocket = (deviceId: string) => {
     if (wsRef.current) {
@@ -95,7 +95,7 @@ export default function CommandAndControlPage() {
     if (!terminalInput.trim()) return;
 
     setTerminalHistory(prev => [...prev, { type: 'input', text: terminalInput }]);
-    
+
     // Fallback to REST execution if WebSocket is not open or we prefer REST for commands
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
        wsRef.current.send(terminalInput);
@@ -120,7 +120,7 @@ export default function CommandAndControlPage() {
          }
        }
     }
-    
+
     setTerminalInput('');
   };
 
@@ -171,7 +171,7 @@ export default function CommandAndControlPage() {
 
   return (
     <div className="relative h-[calc(100vh-6rem)] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700 flex flex-col pb-20">
-      
+
       {/* Header Area */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4 shrink-0">
         <div>
@@ -183,7 +183,7 @@ export default function CommandAndControlPage() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 h-full min-h-0">
-        
+
         {/* Scripts Library Sidebar */}
         <div className={cn(
           "w-full lg:w-80 shrink-0 flex flex-col gap-4",
@@ -267,9 +267,9 @@ export default function CommandAndControlPage() {
                 <TerminalSquare className="h-4 w-4 text-sky-400" />
                 <div className="flex items-center gap-2 text-xs font-bold text-zinc-400">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
-                  <span>P2P Link: <span className="text-emerald-500 font-bold">ESTABLISHED</span></span>
+                  <span>P2P Link: <span className="text-emerald-500 font-bold">{wsRef.current?.readyState === WebSocket.OPEN ? 'ESTABLISHED' : 'STANDBY'}</span></span>
                 </div>
-                
+
                 <div className="relative group flex items-center gap-2">
                   <span className="text-xs text-zinc-600">Target:</span>
                   <input
@@ -287,7 +287,7 @@ export default function CommandAndControlPage() {
 
               <div className="flex items-center gap-4">
                 {selectedScript && (
-                  <button 
+                  <button
                     onClick={() => setSelectedScript(null)}
                     className="text-[10px] font-bold text-zinc-400 hover:text-zinc-200 uppercase tracking-wider bg-zinc-800 hover:bg-zinc-700 px-2 py-1 rounded transition-colors"
                   >
@@ -310,7 +310,7 @@ export default function CommandAndControlPage() {
 
             {/* Viewport Content */}
             <div className="flex-1 mt-[45px] relative">
-              
+
               {selectedScript ? (
                 <div className="absolute inset-0 flex flex-col p-4 animate-in fade-in duration-300 bg-[#0a0a0c]">
                   <div className="flex items-center justify-between mb-4">
@@ -322,7 +322,7 @@ export default function CommandAndControlPage() {
                         <Play className="h-4 w-4" /> Run on Target
                       </button>
                   </div>
-                  <textarea 
+                  <textarea
                     readOnly
                     value={selectedScript.content}
                     className="flex-1 w-full bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] rounded-lg p-4 text-emerald-400/90 text-sm shadow-inner outline-none resize-none leading-relaxed"
@@ -346,13 +346,13 @@ export default function CommandAndControlPage() {
                   <div ref={terminalEndRef} />
                 </div>
               )}
-              
+
               {!selectedScript && (
                 <div className="absolute bottom-0 left-0 right-0 bg-[#0a0a0c] p-4 border-t border-white/5">
                   <form onSubmit={handleCommandSubmit} className="flex items-center gap-2 w-full">
                     <span className="text-sky-400 whitespace-nowrap">root@{targetDeviceId.substring(0,8)}:<span className="text-blue-400">~</span>$</span>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={terminalInput}
                       onChange={(e) => setTerminalInput(e.target.value)}
                       className="flex-1 bg-transparent border-none outline-none text-zinc-300 shadow-none"
@@ -380,7 +380,7 @@ export default function CommandAndControlPage() {
                 <Code className="h-5 w-5 text-sky-400" />
                 Create Script Template
               </h3>
-              <button 
+              <button
                 onClick={() => setIsCreateModalOpen(false)}
                 className="text-zinc-500 hover:text-zinc-300 transition-colors"
                 title="Close"
@@ -389,24 +389,24 @@ export default function CommandAndControlPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <form onSubmit={handleCreateScript} className="flex flex-col">
               <div className="p-6 space-y-6 bg-transparent">
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Script Name</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       required
                       placeholder="e.g. rotate_logs.sh"
                       value={newScriptForm.name}
                       onChange={(e) => setNewScriptForm(prev => ({...prev, name: e.target.value}))}
-                      className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none transition-all" 
+                      className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none transition-all"
                     />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Interpreter Type</label>
-                    <select 
+                    <select
                       value={newScriptForm.interpreter}
                       onChange={(e) => setNewScriptForm(prev => ({...prev, interpreter: e.target.value}))}
                       className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none transition-all"
@@ -420,7 +420,7 @@ export default function CommandAndControlPage() {
 
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Code Payload</label>
-                  <textarea 
+                  <textarea
                     required
                     placeholder="#!/bin/bash"
                     value={newScriptForm.content}
@@ -430,14 +430,14 @@ export default function CommandAndControlPage() {
                 </div>
               </div>
               <div className="border-t border-white/5 p-4 bg-zinc-900/40 backdrop-blur-xl flex justify-end gap-3">
-                <button 
+                <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
                   className="rounded px-4 py-2 text-sm font-bold text-zinc-400 hover:text-zinc-200 transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="rounded bg-sky-500 px-6 py-2 text-sm font-bold text-white hover:bg-sky-600 transition-all duration-300 ease-out active:scale-95 shadow-lg shadow-sky-500/20"
                 >

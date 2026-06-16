@@ -1,31 +1,56 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ShieldCheck, LogIn } from 'lucide-react';
+import { api } from '@/lib/api';
+import useAuthStore from '@/hooks/useAuth';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorSec, setErrorSec] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const setTokens = useAuthStore((state) => state.setTokens);
+  const getDeviceId = useAuthStore((state) => state.getDeviceId);
+
+  useEffect(() => {
+    // Ensure device ID is initialized on mount
+    getDeviceId();
+  }, [getDeviceId]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorSec(null);
+    setIsSubmitting(true);
     try {
-      // Explicitly construct a plain object using only primitive string values
-      // This strictly avoids any circular structure to JSON serialization
-      const payload = JSON.stringify({ 
-        email: email, 
-        password: password 
-      });
-      console.log('Authentication payload generated safely:', payload);
-      router.push('/dashboard');
-    } catch (err) {
-      setErrorSec('An operational exception occurred during authentication.');
+      const deviceId = getDeviceId();
+      const payload = {
+        login: email,
+        password: password,
+        device_id: deviceId,
+      };
+
+      const { data } = await api.post('/api/v1/auth/login', payload);
+
+      if (data.access_token && data.refresh_token) {
+        setTokens(data.access_token, data.refresh_token);
+        router.push('/dashboard');
+      } else {
+         setErrorSec('Invalid credentials or account locked.');
+      }
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        setErrorSec('Invalid credentials or account locked due to brute-force protection.');
+      } else {
+        setErrorSec('An operational exception occurred during authentication.');
+      }
       console.error(err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -53,7 +78,7 @@ export default function LoginPage() {
             <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Email / Identity</label>
             <input 
               id="input-identity-email"
-              type="email" 
+              type="text"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -76,9 +101,10 @@ export default function LoginPage() {
           <button 
             id="btn-submit-session"
             type="submit"
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded bg-sky-500 py-3 text-sm font-bold text-white shadow-[0_0_15px_rgba(14,165,233,0.4)] transition-all hover:bg-sky-600"
+            disabled={isSubmitting}
+            className={`mt-6 flex w-full items-center justify-center gap-2 rounded bg-sky-500 py-3 text-sm font-bold text-white shadow-[0_0_15px_rgba(14,165,233,0.4)] transition-all hover:bg-sky-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            <LogIn className="h-4 w-4" /> Authenticate Session
+            <LogIn className="h-4 w-4" /> {isSubmitting ? 'Authenticating...' : 'Authenticate Session'}
           </button>
         </form>
         

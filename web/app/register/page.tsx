@@ -4,28 +4,41 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { UserPlus } from 'lucide-react';
+import { api } from '@/lib/api';
 
 export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorSec, setErrorSec] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorSec(null);
+    setIsSubmitting(true);
     try {
-      // Explicitly construct a plain object using only primitive string values
-      // This strictly avoids any circular structure to JSON serialization
-      const payload = JSON.stringify({ 
+      const payload = {
         email: email, 
         password: password 
-      });
-      console.log('Registration payload generated safely:', payload);
-      router.push('/dashboard');
-    } catch (err) {
-      setErrorSec('An operational exception occurred during registration.');
+      };
+
+      const { data } = await api.post('/api/v1/auth/register', payload);
+
+      if (data.success) {
+         router.push('/login');
+      } else {
+         setErrorSec('Registration failed.');
+      }
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+         setErrorSec('User already exists.');
+      } else {
+         setErrorSec('An operational exception occurred during registration.');
+      }
       console.error(err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -76,9 +89,10 @@ export default function RegisterPage() {
           <button 
             id="btn-register-submit"
             type="submit"
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded bg-amber-500 py-3 text-sm font-bold text-zinc-950 shadow-[0_0_15px_rgba(245,158,11,0.4)] transition-all hover:bg-amber-600"
+            disabled={isSubmitting}
+            className={`mt-6 flex w-full items-center justify-center gap-2 rounded bg-amber-500 py-3 text-sm font-bold text-zinc-950 shadow-[0_0_15px_rgba(245,158,11,0.4)] transition-all hover:bg-amber-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            Register New Node
+            {isSubmitting ? 'Registering...' : 'Register New Node'}
           </button>
         </form>
         

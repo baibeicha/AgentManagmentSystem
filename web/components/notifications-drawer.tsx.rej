@@ -1,0 +1,9 @@
+--- notifications-drawer.tsx
++++ notifications-drawer.tsx
+@@ -64,7 +64,6 @@
+     if (isOpen && unreadCount > 0) {
+       // Mark all as read when opening drawer
+       setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+-      // eslint-disable-next-line react-hooks/set-state-in-effect
+     }
+   }, [isOpen]);

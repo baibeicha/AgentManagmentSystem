@@ -63,6 +63,18 @@ export default function SettingsPage() {
     permissions: []
   });
 
+  useEffect(() => {
+    if (activeTab === 'team') {
+      fetchUsers();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (profile) {
+      setProfileForm({ login: profile.login, theme: 'dark' });
+    }
+  }, [profile]);
+
   const fetchUsers = async () => {
     try {
       const { data } = await api.get('/api/v1/users');
@@ -79,19 +91,6 @@ export default function SettingsPage() {
       console.error('Failed to fetch users', err);
     }
   };
-
-  useEffect(() => {
-    if (activeTab === 'team') {
-      fetchUsers();
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    if (profile) {
-      setProfileForm(prev => ({ ...prev, login: profile.login }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.login]);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,7 +186,7 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
-      
+
       {/* Header */}
       <div>
         <h1 className="text-3xl font-black tracking-tighter text-zinc-100 flex items-center gap-3">
@@ -197,7 +196,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">
-        
+
         {/* Settings Navigation Sidebar */}
         <div className="w-full lg:w-64 shrink-0">
           <div className="sticky top-24 flex flex-col gap-2 rounded-xl bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] p-3">
@@ -245,7 +244,7 @@ export default function SettingsPage() {
 
         {/* Content Area */}
         <div className="flex-1 min-w-0">
-          
+
           {/* PROFILE TAB */}
           {activeTab === 'profile' && (
             <div className="space-y-6 animate-in fade-in duration-500">
@@ -263,7 +262,7 @@ export default function SettingsPage() {
                 <form onSubmit={handleProfileUpdate} className="space-y-5 max-w-lg">
                   <div>
                     <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Login Identity</label>
-                    <input 
+                    <input
                       type="text"
                       value={profileForm.login}
                       onChange={(e) => setProfileForm({ ...profileForm, login: e.target.value })}
@@ -284,7 +283,7 @@ export default function SettingsPage() {
                     </select>
                   </div>
 
-                  <button 
+                  <button
                     type="submit"
                     className="flex items-center gap-2 rounded bg-sky-500 px-6 py-2.5 text-sm font-bold text-white hover:bg-sky-600 transition-all duration-300 ease-out active:scale-95 shadow-[0_0_15px_rgba(14,165,233,0.3)] mt-4"
                   >
@@ -513,7 +512,7 @@ export default function SettingsPage() {
                 <QrCode className="h-5 w-5 text-sky-400" />
                 Setup 2FA (TOTP)
               </h3>
-              <button 
+              <button
                 onClick={() => setIs2FAModalOpen(false)}
                 className="text-zinc-500 hover:text-zinc-300 transition-colors"
               >
@@ -524,7 +523,7 @@ export default function SettingsPage() {
               <p className="text-sm text-zinc-400">
                 Scan the QR code below with an authenticator app (e.g., Google Authenticator, Authy).
               </p>
-              
+
               <div className="flex justify-center">
                 {/* Mock QR Code Pattern */}
                 <div className="h-48 w-48 bg-white rounded-xl flex items-center justify-center p-4 shadow-inner">
@@ -541,22 +540,22 @@ export default function SettingsPage() {
 
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Confirmation Token</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="000000"
                   maxLength={6}
-                  className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-3 text-center text-lg font-mono tracking-[0.5em] text-zinc-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none transition-all" 
+                  className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-3 text-center text-lg font-mono tracking-[0.5em] text-zinc-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none transition-all"
                 />
               </div>
             </div>
             <div className="border-t border-white/5 p-4 bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] flex justify-end gap-3">
-              <button 
+              <button
                 onClick={() => setIs2FAModalOpen(false)}
                 className="rounded px-4 py-2 text-sm font-bold text-zinc-400 hover:text-zinc-200 transition-colors"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={() => setIs2FAModalOpen(false)}
                 className="rounded bg-sky-500 px-6 py-2 text-sm font-bold text-white hover:bg-sky-600 transition-colors shadow-lg shadow-sky-500/20"
               >
@@ -576,7 +575,7 @@ export default function SettingsPage() {
                 <Users className="h-5 w-5 text-amber-400" />
                 {editingUserId ? 'Edit User Roles & Permissions' : 'Add New User'}
               </h3>
-              <button 
+              <button
                 onClick={() => setIsUserModalOpen(false)}
                 className="text-zinc-500 hover:text-zinc-300 transition-colors"
                 type="button"
@@ -584,33 +583,33 @@ export default function SettingsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <form onSubmit={handleUserSubmit}>
               <div className="p-6 space-y-6 flex-1 bg-transparent">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Email Address</label>
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       required
                       disabled={!!editingUserId}
                       value={userForm.email}
                       onChange={e => setUserForm({ ...userForm, email: e.target.value })}
                       placeholder="user@aegis-os.local"
-                      className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all disabled:opacity-50" 
+                      className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all disabled:opacity-50"
                     />
                   </div>
-                  
+
                   {!editingUserId && (
                     <div className="col-span-2">
                       <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Initial Password</label>
-                      <input 
-                        type="password" 
+                      <input
+                        type="password"
                         required
                         value={userForm.password}
                         onChange={e => setUserForm({ ...userForm, password: e.target.value })}
                         placeholder="••••••••"
-                        className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all" 
+                        className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
                       />
                     </div>
                   )}
@@ -627,15 +626,15 @@ export default function SettingsPage() {
                       <option value="GLOBAL_ADMIN">Global Admin</option>
                     </select>
                   </div>
-                  
+
                   <div className="col-span-2 mt-2">
                     <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-3">Custom Permissions</label>
                     <div className="space-y-3 p-4 bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] rounded-lg border border-white/5">
                       {ALL_PERMISSIONS.map(perm => (
                         <label key={perm} className="flex items-center gap-3 cursor-pointer group">
                           <div className="relative flex items-center justify-center w-4 h-4">
-                            <input 
-                              type="checkbox" 
+                            <input
+                              type="checkbox"
                               checked={userForm.permissions.includes(perm)}
                               onChange={() => togglePermission(perm)}
                               className="peer appearance-none w-4 h-4 border border-white/20 rounded bg-zinc-950 checked:bg-amber-500 checked:border-amber-500 transition-colors"
@@ -655,14 +654,14 @@ export default function SettingsPage() {
               </div>
 
               <div className="border-t border-white/5 p-4 bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] flex justify-end gap-3 rounded-b-xl">
-                <button 
+                <button
                   type="button"
                   onClick={() => setIsUserModalOpen(false)}
                   className="rounded px-4 py-2 text-sm font-bold text-zinc-400 hover:text-zinc-200 transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="rounded bg-amber-500 px-6 py-2 text-sm font-bold text-zinc-950 hover:bg-amber-400 transition-all duration-300 ease-out active:scale-95 shadow-lg shadow-amber-500/20"
                 >
