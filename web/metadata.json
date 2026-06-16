@@ -1,0 +1,6 @@
+{
+  "name": "Aegis OS",
+  "description": "A specialized tactical cyber-infrastructure control panel with interactive command shell, telemetry tracking, real-time trigger alarms, and autonomous script dispatch controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
