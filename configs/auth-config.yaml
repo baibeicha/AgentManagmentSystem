@@ -33,4 +33,9 @@ jwt:
 log:
   type: dev
   level: debug
-  path: logs\auth-log.txt
+  file:
+    path: logs\auth-log.txt
+    maxSizeMb: 256
+    maxBackups: 2
+    maxAgeDays: 30
+    compress: true
