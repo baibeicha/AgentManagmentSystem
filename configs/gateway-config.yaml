@@ -11,9 +11,4 @@ server:
 log:
   type: dev
   level: debug
-  file:
-    path: logs\gateway-log.txt
-    maxSizeMb: 256
-    maxBackups: 2
-    maxAgeDays: 30
-    compress: true
+  path: logs\gateway-log.txt

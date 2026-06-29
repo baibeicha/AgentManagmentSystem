@@ -25,8 +25,7 @@ func GetGrpcConfig(cfg *config.Config, serviceName string) *GRPCClientConfig {
 	}
 }
 
-func NewGrpcClient(cfg *config.Config, clientName string) (*grpc.ClientConn, error) {
-	log := slog.Default()
+func NewGrpcClient(cfg *config.Config, log *slog.Logger, clientName string) (*grpc.ClientConn, error) {
 	client := GetGrpcConfig(cfg, clientName)
 
 	if client == nil {

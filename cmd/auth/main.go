@@ -29,16 +29,16 @@ func main() {
 
 	_ = cfg.Datasource
 
-	log, err := logger.New(
-		logger.WithLevel(cfg.Log.Level),
-		logger.WithEnv(cfg.Log.Type),
-		logger.WithFileOutput(cfg.Log.File.ToArgs()),
+	lotCfg := cfg.Log
+	log, logFile, err := logger.SetupLogger(
+		lotCfg.Type,
+		lotCfg.Level,
+		lotCfg.Path,
 	)
-
 	if err != nil {
-		log.Error("can not setup logger", "err", err)
-		return
+		panic("failed to setup logger: " + err.Error())
 	}
+	defer logFile.Close()
 
 	log.Info("Starting Auth Service...")
 
@@ -61,7 +61,7 @@ func main() {
 	tokenRepo := repository.NewRedisTokenRepo(cfg, redisClient)
 
 	jwtCfg := cfg.JWT
-	tokenProvider, err := jwt.NewTokenProvider(cfg, tokenRepo, jwtCfg.TTL.GetAccessTTL(), jwtCfg.TTL.GetRefreshTTL())
+	tokenProvider, err := jwt.NewTokenProvider(cfg, log, tokenRepo, jwtCfg.TTL.GetAccessTTL(), jwtCfg.TTL.GetRefreshTTL())
 
 	if err != nil {
 		log.Error("failed to create token provider", "err", err)
@@ -73,6 +73,7 @@ func main() {
 	sessionRepo := repository.NewSessionRepository(db)
 
 	authService := service.NewAuthService(
+		log,
 		cfg,
 		tokenProvider,
 		userRepo,
@@ -108,7 +109,7 @@ func main() {
 	}
 
 	opts = append(opts, grpc.ChainUnaryInterceptor(
-		interceptor.LoggerInterceptor(),
+		interceptor.LoggerInterceptor(log),
 	))
 
 	grpcServer := grpc.NewServer(opts...)

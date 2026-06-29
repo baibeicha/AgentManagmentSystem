@@ -24,12 +24,12 @@ type AuthServiceClient struct {
 	log        *slog.Logger
 }
 
-func NewAuthServiceClient(conn *grpc.ClientConn) *AuthServiceClient {
+func NewAuthServiceClient(conn *grpc.ClientConn, log *slog.Logger) *AuthServiceClient {
 	authClient := auth.NewAuthServiceClient(conn)
 	return &AuthServiceClient{
 		conn:       conn,
 		authClient: authClient,
-		log:        slog.Default(),
+		log:        log,
 	}
 }
 

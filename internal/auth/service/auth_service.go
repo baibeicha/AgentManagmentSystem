@@ -38,6 +38,7 @@ type AuthService struct {
 }
 
 func NewAuthService(
+	log *slog.Logger,
 	cfg *config.Config,
 	tokenProvider *jwt.TokenProvider,
 	userRepo *repository.UserRepository,
@@ -45,7 +46,7 @@ func NewAuthService(
 	sessionRepo *repository.SessionRepository,
 ) *AuthService {
 	return &AuthService{
-		log:           slog.Default(),
+		log:           log,
 		cfg:           cfg,
 		tokenProvider: tokenProvider,
 		userRepo:      userRepo,
