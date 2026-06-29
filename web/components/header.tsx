@@ -68,8 +68,8 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
             <Menu className="h-6 w-6" />
           </button>
           <div className="flex items-center gap-4 text-lg md:text-xl font-black text-zinc-100 drop-shadow-md tracking-tighter">
-            <span className="hidden sm:inline">Aegis XDR</span>
-            <span className="sm:hidden">Aegis</span>
+            <span className="hidden sm:inline">Agent Management System</span>
+            <span className="sm:hidden">AMS</span>
           </div>
         </div>
 

@@ -63,7 +63,7 @@ export default function LoginPage() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-sky-500/10 border border-sky-500/20 shadow-inner">
             <ShieldCheck className="h-8 w-8 text-sky-400 drop-shadow-[0_0_8px_rgba(14,165,233,0.5)]" />
           </div>
-          <h1 id="login-title" className="text-2xl font-black tracking-tighter text-zinc-100">Aegis Login</h1>
+          <h1 id="login-title" className="text-2xl font-black tracking-tighter text-zinc-100">AMS Login</h1>
           <p id="login-subtitle" className="mt-2 text-xs font-mono text-zinc-500">Authenticate via /api/v1/auth/login</p>
         </div>
 

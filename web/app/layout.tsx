@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' });
 
 export const metadata: Metadata = {
-  title: 'Aegis XDR / RMM',
+  title: 'Agent Management System',
   description: 'Enterprise monitoring and security platform',
 };
 
