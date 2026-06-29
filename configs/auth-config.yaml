@@ -2,7 +2,7 @@ app:
   name: AMS
 
 grpc:
-  port: 50051
+  port: ${AUTH_SERVICE_PORT}
   tls:
     enabled: true
     cert_path: "certs/server.crt"
@@ -33,4 +33,9 @@ jwt:
 log:
   type: dev
   level: debug
-  path: logs\auth-log.txt
+  file:
+    path: logs\auth-log.txt
+    maxSizeMb: 256
+    maxBackups: 2
+    maxAgeDays: 30
+    compress: true

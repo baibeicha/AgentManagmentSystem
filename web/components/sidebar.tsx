@@ -45,9 +45,8 @@ export default function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps)
         <div className="mb-8 flex items-start justify-between">
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-bold tracking-tighter text-sky-400 drop-shadow-[0_0_15px_rgba(14,165,233,0.3)]">
-              AEGIS_OS
+              AMS
             </h1>
-            <span className="font-mono text-xs text-zinc-500">V2.0.4-STABLE</span>
           </div>
           {isMobileOpen && (
             <button 

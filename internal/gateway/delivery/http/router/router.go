@@ -9,11 +9,14 @@ import (
 	"AgentManagmentSystem/internal/gateway/delivery/http/middleware"
 )
 
-func SetupRouter(log *slog.Logger, h *handler.GatewayHandlers) *gin.Engine {
+func SetupRouter(h *handler.GatewayHandlers) *gin.Engine {
+	log := slog.Default()
+
 	r := gin.New()
 
 	r.Use(middleware.RequestLogger(log))
 	r.Use(middleware.Recovery(log))
+	r.Use(middleware.CorsMiddleware())
 
 	r.GET("/healthz", h.Liveness)
 	r.GET("/readyz", h.Readiness)

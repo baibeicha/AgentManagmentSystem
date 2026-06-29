@@ -33,7 +33,7 @@ func (tp *TokenProvider) GetClaims(tokenString string) (*TokenClaims, error) {
 	return token.Claims.(*TokenClaims), nil
 }
 
-func NewTokenProvider(cfg *config.Config, log *slog.Logger, repo TokenRepository, accessTTL, refreshTTL time.Duration) (*TokenProvider, error) {
+func NewTokenProvider(cfg *config.Config, repo TokenRepository, accessTTL, refreshTTL time.Duration) (*TokenProvider, error) {
 	privBytes, err := os.ReadFile(cfg.JWT.PrivateKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read private key: %w", err)
@@ -58,6 +58,6 @@ func NewTokenProvider(cfg *config.Config, log *slog.Logger, repo TokenRepository
 		repo:       repo,
 		accessTTL:  accessTTL,
 		refreshTTL: refreshTTL,
-		log:        log,
+		log:        slog.Default(),
 	}, nil
 }
