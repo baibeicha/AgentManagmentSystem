@@ -2,36 +2,85 @@ package logger
 
 import (
 	"context"
-	"fmt"
+	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
-	"time"
+
+	"github.com/lmittmann/tint"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 type contextKey string
 
 const RequestIDKey contextKey = "request_id"
 
-var LogLevel = new(slog.LevelVar)
+type Config struct {
+	Level      string
+	Env        string
+	Filename   string
+	MaxSize    int
+	MaxBackups int
+	MaxAge     int
+	Compress   bool
+}
+
+type Option func(*Config)
+
+func WithLevel(level string) Option {
+	return func(c *Config) { c.Level = level }
+}
+
+func WithEnv(env string) Option {
+	return func(c *Config) { c.Env = env }
+}
+
+func WithFileOutput(filename string, maxSizeMB, maxBackups, maxAgeDays int, compress bool) Option {
+	return func(c *Config) {
+		c.Filename = filename
+		c.MaxSize = maxSizeMB
+		c.MaxBackups = maxBackups
+		c.MaxAge = maxAgeDays
+		c.Compress = compress
+	}
+}
+
+type Logger struct {
+	*slog.Logger
+	file io.Closer
+}
+
+func (l *Logger) Close() error {
+	if l.file != nil {
+		return l.file.Close()
+	}
+	return nil
+}
 
 type ContextHandler struct {
 	slog.Handler
 }
 
-func (h ContextHandler) Handle(ctx context.Context, r slog.Record) error {
-	if reqID, ok := ctx.Value(RequestIDKey).(string); ok {
+func (h *ContextHandler) Handle(ctx context.Context, r slog.Record) error {
+	if reqID, ok := ctx.Value(RequestIDKey).(string); ok && reqID != "" {
 		r.AddAttrs(slog.String("request_id", reqID))
 	}
 	return h.Handler.Handle(ctx, r)
+}
+
+func (h *ContextHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &ContextHandler{Handler: h.Handler.WithAttrs(attrs)}
+}
+
+func (h *ContextHandler) WithGroup(name string) slog.Handler {
+	return &ContextHandler{Handler: h.Handler.WithGroup(name)}
 }
 
 type MultiHandler struct {
 	handlers []slog.Handler
 }
 
-func NewMultiHandler(handlers ...slog.Handler) slog.Handler {
+func NewMultiHandler(handlers ...slog.Handler) *MultiHandler {
 	return &MultiHandler{handlers: handlers}
 }
 
@@ -60,7 +109,7 @@ func (m *MultiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	for i, h := range m.handlers {
 		handlers[i] = h.WithAttrs(attrs)
 	}
-	return &MultiHandler{handlers: handlers}
+	return NewMultiHandler(handlers...)
 }
 
 func (m *MultiHandler) WithGroup(name string) slog.Handler {
@@ -68,84 +117,82 @@ func (m *MultiHandler) WithGroup(name string) slog.Handler {
 	for i, h := range m.handlers {
 		handlers[i] = h.WithGroup(name)
 	}
-	return &MultiHandler{handlers: handlers}
+	return NewMultiHandler(handlers...)
 }
 
-func SetLevel(levelStr string) {
-	switch strings.ToLower(levelStr) {
-	case "debug":
-		LogLevel.Set(slog.LevelDebug)
-	case "info":
-		LogLevel.Set(slog.LevelInfo)
-	case "warn", "warning":
-		LogLevel.Set(slog.LevelWarn)
-	case "error", "err":
-		LogLevel.Set(slog.LevelError)
-	default:
-		LogLevel.Set(slog.LevelInfo)
+func New(opts ...Option) (*Logger, error) {
+	cfg := &Config{
+		Level: "info",
+		Env:   "development",
 	}
-}
 
-func SetupLogger(env, levelStr, filename string) (*slog.Logger, *os.File, error) {
-	SetLevel(levelStr)
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	var level slog.LevelVar
+	switch strings.ToLower(cfg.Level) {
+	case "debug":
+		level.Set(slog.LevelDebug)
+	case "warn", "warning":
+		level.Set(slog.LevelWarn)
+	case "error", "err":
+		level.Set(slog.LevelError)
+	default:
+		level.Set(slog.LevelInfo)
+	}
 
 	var handlers []slog.Handler
 
-	var consoleHandler slog.Handler
-	if env == "production" {
-		consoleHandler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: LogLevel, AddSource: true})
-	} else {
-		consoleHandler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			Level: LogLevel,
-			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-				if a.Key == slog.TimeKey {
-					return slog.String(a.Key, a.Value.Time().Format(time.DateTime))
-				}
-				if a.Key == slog.SourceKey {
-					source := a.Value.Any().(*slog.Source)
-					source.File = filepath.Base(source.File)
-				}
-				if a.Key == slog.LevelKey {
-					level := a.Value.Any().(slog.Level)
-					var color string
-					switch level {
-					case slog.LevelDebug:
-						color = "\033[36m" // Cyan
-					case slog.LevelInfo:
-						color = "\033[32m" // Green
-					case slog.LevelWarn:
-						color = "\033[33m" // Yellow
-					case slog.LevelError:
-						color = "\033[31m" // Red
-					default:
-						color = "\033[0m"
-					}
-					return slog.String(a.Key, color+level.String()+"\033[0m")
-				}
-				return a
-			},
-		})
-	}
-	handlers = append(handlers, consoleHandler)
-
-	var logFile *os.File
-	var err error
-	if filename != "" {
-		logFile, err = os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-		if err != nil {
-			err = fmt.Errorf("can not open logs file: %w", err)
-		}
-
-		fileHandler := slog.NewJSONHandler(logFile, &slog.HandlerOptions{
-			Level:     LogLevel,
+	if cfg.Env == "production" || cfg.Env == "prod" {
+		handlers = append(handlers, slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			Level:     &level,
 			AddSource: true,
-		})
-
-		handlers = append(handlers, fileHandler)
+		}))
+	} else {
+		handlers = append(handlers, tint.NewHandler(os.Stdout, &tint.Options{
+			Level:      &level,
+			AddSource:  true,
+			TimeFormat: "15:04:05.000",
+		}))
 	}
 
-	logger := slog.New(ContextHandler{Handler: NewMultiHandler(handlers...)})
+	var fileCloser io.Closer
+	if cfg.Filename != "" {
+		fileWriter := &lumberjack.Logger{
+			Filename:   cfg.Filename,
+			MaxSize:    cfg.MaxSize,
+			MaxBackups: cfg.MaxBackups,
+			MaxAge:     cfg.MaxAge,
+			Compress:   cfg.Compress,
+		}
+		fileCloser = fileWriter
+
+		handlers = append(handlers, slog.NewJSONHandler(fileWriter, &slog.HandlerOptions{
+			Level:     &level,
+			AddSource: true,
+		}))
+	}
+
+	multiHandler := NewMultiHandler(handlers...)
+	contextHandler := &ContextHandler{Handler: multiHandler}
+
+	logger := slog.New(contextHandler)
 	slog.SetDefault(logger)
 
-	return logger, logFile, err
+	return &Logger{
+		Logger: logger,
+		file:   fileCloser,
+	}, nil
+}
+
+func WithRequestID(ctx context.Context, reqID string) context.Context {
+	return context.WithValue(ctx, RequestIDKey, reqID)
+}
+
+func GetRequestID(ctx context.Context) string {
+	if reqID, ok := ctx.Value(RequestIDKey).(string); ok {
+		return reqID
+	}
+	return ""
 }

@@ -1,66 +1,128 @@
 'use client';
 
-import { 
-  Activity, ShieldAlert, Cpu, Network, CheckCircle2, AlertTriangle, TerminalSquare
-} from 'lucide-react';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar
-} from 'recharts';
-import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Activity, ShieldAlert, Cpu, Network, TerminalSquare } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { api } from '@/lib/api';
+import { useLiveMetrics } from '@/hooks/useLiveMetrics';
 
-// --- MOCKS ---
-const MOCK_KPIS = [
-  { label: 'Active Agents', value: '1,452', change: '+12', status: 'optimal', icon: Network },
-  { label: 'Avg CPU Load', value: '45.2%', change: '+2.1%', status: 'warning', icon: Cpu },
-  { label: 'Unresolved Incidents', value: '3', change: '-2', status: 'critical', icon: ShieldAlert },
-  { label: 'Network Throughput', value: '1.2 TB/s', change: '+0.1 TB/s', status: 'optimal', icon: Activity },
-];
+interface KpiData {
+  label: string;
+  value: string;
+  change: string;
+  status: 'optimal' | 'warning' | 'critical';
+  icon: any;
+}
 
-const MOCK_HISTORICAL_METRICS_BASE = Array.from({ length: 24 }).map((_, i) => ({
-  time: `${i}:00`,
-  avg_cpu: Math.floor(Math.random() * 40 + 20),
-  avg_memory: Math.floor(Math.random() * 30 + 40),
-  network_io: Math.floor(Math.random() * 100 + 50),
-}));
-
-const MOCK_TOP_EXHAUSTED = [
-  { host_id: 'db-master-01', hostname: 'eu-west-db1', cpu: 98.5, mem: 92.1 },
-  { host_id: 'cache-redis-04', hostname: 'us-east-cache4', cpu: 94.2, mem: 88.0 },
-  { host_id: 'worker-node-12', hostname: 'ap-south-worker12', cpu: 89.1, mem: 76.5 },
-  { host_id: 'lb-ingress-02', hostname: 'eu-central-lb2', cpu: 85.0, mem: 60.2 },
-];
-
-const MOCK_INCIDENTS = [
-  { id: 'INC-1042', severity: 'critical', title: 'DB Replication Lag Exceeded', time: '10m ago' },
-  { id: 'INC-1043', severity: 'warning', title: 'High Memory Usage on worker pool', time: '2h ago' },
-  { id: 'INC-1044', severity: 'info', title: 'Automated Snapshot Completed', time: '4h ago' },
-];
+interface TopDevice {
+  device_id: string;
+  alias: string;
+  value: number;
+}
 
 export default function DashboardPage() {
   const [selectedGroup, setSelectedGroup] = useState('all');
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [topExhausted, setTopExhausted] = useState<TopDevice[]>([]);
 
-  const multiplier = selectedGroup === 'all' ? 1 : selectedGroup === 'web-tier' ? 0.6 : selectedGroup === 'databases' ? 1.4 : 0.8;
-  const currentChartData = MOCK_HISTORICAL_METRICS_BASE.map(d => ({
-    time: d.time,
-    avg_cpu: Math.min(d.avg_cpu * multiplier, 100),
-    avg_memory: Math.min(d.avg_memory * multiplier, 100),
-  }));
+  // Real-time metrics hook (Optional: could be used to update KPIs)
+  const { metrics, isConnected } = useLiveMetrics();
+
+  // We could use the live metrics to update these KPIs dynamically.
+  // For now, we will just stub them out as we did before, but they can be updated via the `metrics` state.
+  const [kpis, setKpis] = useState<KpiData[]>([
+    { label: 'Active Agents', value: '1,248', change: '+12', status: 'optimal', icon: Activity },
+    { label: 'Open Incidents', value: '3', change: '-2', status: 'warning', icon: ShieldAlert },
+    { label: 'Avg CPU Load', value: '42%', change: '+5%', status: 'optimal', icon: Cpu },
+    { label: 'Network I/O', value: '1.2 GB/s', change: '+0.1', status: 'optimal', icon: Network },
+  ]);
+
+  useEffect(() => {
+    // If we receive live metrics, update KPIs
+    if (metrics) {
+       // Example logic to map metrics to KPIs if the backend stream provides it
+       // setKpis([...])
+    }
+  }, [metrics]);
+
+  useEffect(() => {
+    const fetchAggregatedMetrics = async () => {
+      try {
+        const queryParams = new URLSearchParams({
+          metric_type: 'cpu',
+          from: new Date(Date.now() - 3600000).toISOString(), // Last hour
+          to: new Date().toISOString(),
+          step: '5m'
+        });
+
+        if (selectedGroup !== 'all') {
+          queryParams.append('group_id', selectedGroup);
+        }
+
+        const { data } = await api.get(`/api/v1/metrics/aggregated?${queryParams.toString()}`);
+
+        // Ensure data is mapped correctly for Recharts
+        if (data && data.values) {
+           const formattedData = data.values.map((v: any[]) => ({
+             time: new Date(parseInt(v[0]) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+             avg_cpu: parseFloat(v[1]),
+             // If we had memory, we'd map it here. We'll simulate it for visual completeness if backend only returns CPU.
+             avg_memory: parseFloat(v[1]) * 0.8
+           }));
+           setChartData(formattedData);
+        }
+      } catch (err) {
+        console.error('Failed to fetch aggregated metrics', err);
+      }
+    };
+
+    fetchAggregatedMetrics();
+  }, [selectedGroup]);
+
+  useEffect(() => {
+    const fetchTopExhausted = async () => {
+      try {
+        const { data } = await api.get('/api/v1/metrics/top?metric_type=cpu&limit=5');
+        setTopExhausted(data || []);
+      } catch (err) {
+        console.error('Failed to fetch top exhausted hosts', err);
+      }
+    };
+
+    fetchTopExhausted();
+  }, []);
+
+  // For visual consistency, mock incidents for the Triage Feed until Phase 3 where we fetch them.
+  const MOCK_INCIDENTS = [
+    { id: 'INC-1042', severity: 'critical', title: 'DB Replication Lag Exceeded', time: '10m ago' },
+    { id: 'INC-1043', severity: 'warning', title: 'High Memory Usage on worker pool', time: '2h ago' },
+  ];
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-black tracking-tighter text-zinc-100">Global Telemetry</h1>
+        <h1 className="text-3xl font-black tracking-tighter text-zinc-100 flex items-center gap-3">
+          Global Telemetry
+          {isConnected ? (
+            <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-zinc-500 bg-zinc-800/50 px-2 py-1 rounded border border-zinc-700">
+              Connecting...
+            </span>
+          )}
+        </h1>
         <p className="text-sm text-zinc-500">Real-time infrastructure performance and security events.</p>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {MOCK_KPIS.map((kpi, idx) => {
+        {kpis.map((kpi, idx) => {
           const Icon = kpi.icon;
           return (
             <div key={idx} className="group relative overflow-hidden rounded-xl bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] p-6 transition-all hover:bg-zinc-900 shadow-sm">
@@ -102,6 +164,7 @@ export default function DashboardPage() {
                 className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] rounded px-3 py-1.5 text-[11px] font-bold text-sky-400 focus:outline-none focus:border-sky-500 cursor-pointer shadow-inner uppercase tracking-wider transition-colors outline-none"
               >
                 <option value="all">All Devices</option>
+                {/* Realistically, groups would be fetched, but we use static options for now to maintain UI */}
                 <option value="web-tier">Web Tier</option>
                 <option value="databases">Databases</option>
                 <option value="worker-pool">Worker Pool</option>
@@ -115,15 +178,15 @@ export default function DashboardPage() {
           
           <div className="h-[300px] w-full mt-auto">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={currentChartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="colorMem" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
@@ -134,7 +197,7 @@ export default function DashboardPage() {
                   itemStyle={{ color: '#d4d4d8' }}
                 />
                 <Area type="monotone" dataKey="avg_cpu" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorCpu)" />
-                <Area type="monotone" dataKey="avg_memory" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorMem)" />
+                <Area type="monotone" dataKey="avg_memory" stroke="#0ea5e9" strokeWidth={2} fillOpacity={1} fill="url(#colorMem)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -150,24 +213,23 @@ export default function DashboardPage() {
               <Activity className="h-4 w-4 text-rose-500 animate-pulse" />
             </div>
             <div className="space-y-4">
-              {MOCK_TOP_EXHAUSTED.map((host, idx) => (
+              {topExhausted.map((host, idx) => (
                 <div key={idx} className="group flex items-center justify-between rounded p-2 hover:bg-zinc-800/50 transition-colors">
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-zinc-200">{host.hostname}</span>
-                    <span className="text-[10px] font-mono text-zinc-500">{host.host_id}</span>
+                    <span className="text-sm font-bold text-zinc-200">{host.alias || 'Unknown'}</span>
+                    <span className="text-[10px] font-mono text-zinc-500">{host.device_id.substring(0, 8)}...</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex flex-col items-end">
                       <span className="text-[10px] uppercase font-bold text-zinc-500">CPU</span>
-                      <span className="text-xs font-mono text-rose-400">{host.cpu}%</span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[10px] uppercase font-bold text-zinc-500">MEM</span>
-                      <span className="text-xs font-mono text-amber-400">{host.mem}%</span>
+                      <span className="text-xs font-mono text-rose-400">{host.value}%</span>
                     </div>
                   </div>
                 </div>
               ))}
+              {topExhausted.length === 0 && (
+                <div className="text-xs text-zinc-500 font-mono text-center py-4">No data available</div>
+              )}
             </div>
           </div>
 

@@ -1,356 +1,503 @@
 'use client';
 
-import { useState } from 'react';
-import { 
-  User, ShieldAlert, Key, BellRing, History, Users, X, QrCode, Lock, Send, Edit
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Settings, User, Shield, Key, Users, Smartphone, Bell, Eye, EyeOff, Save, ShieldAlert, QrCode, X, Search, Check, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api';
+import useAuthStore from '@/hooks/useAuth';
 
 type GlobalRole = 'GLOBAL_ADMIN' | 'TEAM_ADMIN' | 'USER';
-type Permission = 'Metrics:View' | 'Terminal:Execute' | 'Incidents:Manage';
-const ALL_PERMISSIONS: Permission[] = ['Metrics:View', 'Terminal:Execute', 'Incidents:Manage'];
 
-type AppUser = {
-  id: number;
-  email: string;
+interface UserData {
+  id: string; // The endpoint returns `user_id`, mapping it for the UI
+  email: string; // endpoint `login`
   role: GlobalRole;
-  permissions: Permission[];
+  status: 'active' | 'suspended';
   lastLogin: string;
-};
+}
+
+const ALL_PERMISSIONS = [
+  'Metrics:View',
+  'Inventory:Manage',
+  'Incidents:Acknowledge',
+  'Incidents:Resolve',
+  'Terminal:Execute',
+  'Playbooks:Edit'
+];
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<'profile' | 'rbac' | 'notifications' | 'audit'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'team'>('profile');
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Modals
   const [is2FAModalOpen, setIs2FAModalOpen] = useState(false);
-  const [passwordForm, setPasswordForm] = useState({ current: '', new: '' });
-  const [passwordStatus, setPasswordStatus] = useState<'idle' | 'success'>('idle');
-
-  // RBAC State
-  const [users, setUsers] = useState<AppUser[]>([
-    { id: 1, email: 'admin@aegis-os.local', role: 'GLOBAL_ADMIN', permissions: ['Metrics:View', 'Terminal:Execute', 'Incidents:Manage'], lastLogin: 'Current Session' },
-    { id: 2, email: 'l2-support@aegis-os.local', role: 'TEAM_ADMIN', permissions: ['Metrics:View', 'Incidents:Manage'], lastLogin: '2 hours ago' },
-    { id: 3, email: 'read-only-dev@aegis-os.local', role: 'USER', permissions: ['Metrics:View'], lastLogin: '1 day ago' }
-  ]);
-
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [editingUserId, setEditingUserId] = useState<number | null>(null);
-  const [userForm, setUserForm] = useState<{ email: string; password: string; role: GlobalRole; permissions: Permission[] }>({
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+
+  // Profile Form
+  const { profile, setProfile } = useAuthStore();
+  const [profileForm, setProfileForm] = useState({
+    login: profile?.login || '',
+    theme: 'dark'
+  });
+
+  // Password Update Form
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_password: ''
+  });
+  const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
+
+  // Team State
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [userForm, setUserForm] = useState<{
+    email: string;
+    password?: string;
+    role: GlobalRole;
+    permissions: string[];
+  }>({
     email: '',
     password: '',
     role: 'USER',
-    permissions: ['Metrics:View']
+    permissions: []
   });
 
-  const handlePasswordChange = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordStatus('success');
-    setTimeout(() => {
-      setPasswordStatus('idle');
-      setPasswordForm({ current: '', new: '' });
-    }, 3000);
+  const fetchUsers = async () => {
+    try {
+      const { data } = await api.get('/api/v1/users');
+      // Map API schema to internal state
+      const mapped = (data || []).map((u: any) => ({
+        id: u.user_id,
+        email: u.login || u.email,
+        role: u.role,
+        status: 'active', // mock status since it's missing in minimal payload
+        lastLogin: new Date().toISOString() // mock for visual
+      }));
+      setUsers(mapped);
+    } catch (err) {
+      console.error('Failed to fetch users', err);
+    }
   };
 
-  const openUserModal = (user?: AppUser) => {
-    if (user) {
-      setEditingUserId(user.id);
-      setUserForm({ email: user.email, password: '', role: user.role, permissions: user.permissions });
-    } else {
-      setEditingUserId(null);
-      setUserForm({ email: '', password: '', role: 'USER', permissions: ['Metrics:View'] });
+  useEffect(() => {
+    if (activeTab === 'team') {
+      fetchUsers();
     }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (profile) {
+      setProfileForm(prev => ({ ...prev, login: profile.login }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.login]);
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.put('/api/v1/auth/me', {
+        login: profileForm.login,
+        preferences: { theme: profileForm.theme }
+      });
+      if (profile) {
+        setProfile({ ...profile, login: profileForm.login });
+      }
+      // optional: success toast
+    } catch (err) {
+      console.error('Failed to update profile', err);
+    }
+  };
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordMessage({ type: '', text: '' });
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      setPasswordMessage({ type: 'error', text: 'New passwords do not match' });
+      return;
+    }
+    try {
+      await api.put('/api/v1/auth/password', {
+        current_password: passwordForm.current_password,
+        new_password: passwordForm.new_password
+      });
+      setPasswordMessage({ type: 'success', text: 'Password successfully changed' });
+      setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
+    } catch (err: any) {
+      setPasswordMessage({ type: 'error', text: err.response?.status === 403 ? 'Incorrect current password' : 'Update failed' });
+    }
+  };
+
+  const handleUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingUserId) {
+         // Update roles
+         await api.put(`/api/v1/users/${editingUserId}/roles`, {
+           role: userForm.role,
+           permissions: userForm.permissions
+         });
+      } else {
+         // Invite / create user via POST
+         await api.post('/api/v1/users', {
+           email: userForm.email,
+           role: userForm.role
+         });
+      }
+      setIsUserModalOpen(false);
+      fetchUsers();
+    } catch (err) {
+      console.error('Failed to submit user', err);
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    try {
+      await api.delete(`/api/v1/users/${id}`);
+      fetchUsers();
+    } catch (err) {
+      console.error('Failed to delete user', err);
+    }
+  };
+
+  const openNewUserModal = () => {
+    setEditingUserId(null);
+    setUserForm({ email: '', password: '', role: 'USER', permissions: ['Metrics:View'] });
     setIsUserModalOpen(true);
   };
 
-  const handleUserSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingUserId) {
-      setUsers(users.map(u => u.id === editingUserId ? { ...u, role: userForm.role, permissions: userForm.permissions } : u));
-    } else {
-      const newUser: AppUser = {
-        id: Date.now(),
-        email: userForm.email,
-        role: userForm.role,
-        permissions: userForm.permissions,
-        lastLogin: 'Never'
-      };
-      setUsers([...users, newUser]);
-    }
-    setIsUserModalOpen(false);
+  const openEditUserModal = (user: UserData) => {
+    setEditingUserId(user.id);
+    setUserForm({
+      email: user.email,
+      role: user.role,
+      permissions: ['Metrics:View'] // Assuming we'd fetch actual perms here if available
+    });
+    setIsUserModalOpen(true);
   };
 
-  const togglePermission = (perm: Permission) => {
+  const togglePermission = (perm: string) => {
     setUserForm(prev => {
-      const has = prev.permissions.includes(perm);
-      return {
-        ...prev,
-        permissions: has ? prev.permissions.filter(p => p !== perm) : [...prev.permissions, perm]
-      };
+      const perms = prev.permissions.includes(perm)
+        ? prev.permissions.filter(p => p !== perm)
+        : [...prev.permissions, perm];
+      return { ...prev, permissions: perms };
     });
   };
 
-  const handleRevokeUser = (id: number) => {
-    setUsers(users.filter(u => u.id !== id));
-  };
-
   return (
-    <div className="flex h-[calc(100vh-8rem)] flex-col space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       
       {/* Header */}
-      <div className="border-b border-white/5 pb-6">
-        <h1 className="text-3xl font-black tracking-tighter text-zinc-100 mb-2">System Configuration</h1>
-        <p className="text-sm text-zinc-500">Manage identity, access control, and platform integrations.</p>
+      <div>
+        <h1 className="text-3xl font-black tracking-tighter text-zinc-100 flex items-center gap-3">
+          Platform Configuration
+        </h1>
+        <p className="text-sm text-zinc-500">Manage identity, security policies, and team access.</p>
       </div>
 
-      <div className="flex flex-1 gap-8 overflow-hidden relative">
+      <div className="flex flex-col lg:flex-row gap-8">
         
-        {/* Sidebar Nav */}
-        <div className="w-64 shrink-0 overflow-y-auto pr-4 space-y-1">
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={cn(
-              "flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-200",
-              activeTab === 'profile' 
-                ? "bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] text-zinc-100 shadow-sm" 
-                : "text-zinc-400 hover:bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] hover:text-zinc-200"
-            )}
-          >
-            <User className={cn("h-4 w-4", activeTab === 'profile' ? "text-sky-400" : "")} />
-            Profile & Security
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('rbac')}
-            className={cn(
-              "flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-200",
-              activeTab === 'rbac' 
-                ? "bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] text-zinc-100 shadow-sm" 
-                : "text-zinc-400 hover:bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] hover:text-zinc-200"
-            )}
-          >
-            <Users className={cn("h-4 w-4", activeTab === 'rbac' ? "text-amber-400" : "")} />
-            Team & RBAC
-          </button>
+        {/* Settings Navigation Sidebar */}
+        <div className="w-full lg:w-64 shrink-0">
+          <div className="sticky top-24 flex flex-col gap-2 rounded-xl bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] p-3">
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all duration-300",
+                activeTab === 'profile'
+                  ? "bg-zinc-800 text-sky-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] border border-white/[0.02]"
+                  : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02]"
+              )}
+            >
+              <User className="h-4 w-4" /> Personal Profile
+            </button>
+            <button
+              onClick={() => setActiveTab('security')}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all duration-300",
+                activeTab === 'security'
+                  ? "bg-zinc-800 text-emerald-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] border border-white/[0.02]"
+                  : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02]"
+              )}
+            >
+              <Shield className="h-4 w-4" /> Security & 2FA
+            </button>
 
-          <button
-            onClick={() => setActiveTab('notifications')}
-            className={cn(
-              "flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-200",
-              activeTab === 'notifications' 
-                ? "bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] text-zinc-100 shadow-sm" 
-                : "text-zinc-400 hover:bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] hover:text-zinc-200"
+            {profile?.role === 'GLOBAL_ADMIN' && (
+              <>
+                <div className="h-px bg-white/5 my-2 mx-2" />
+                <button
+                  onClick={() => setActiveTab('team')}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all duration-300",
+                    activeTab === 'team'
+                      ? "bg-zinc-800 text-amber-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] border border-white/[0.02]"
+                      : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02]"
+                  )}
+                >
+                  <Users className="h-4 w-4" /> Identity & RBAC
+                </button>
+              </>
             )}
-          >
-            <BellRing className={cn("h-4 w-4", activeTab === 'notifications' ? "text-emerald-400" : "")} />
-            Dispatch Channels
-          </button>
-
-          <button
-            onClick={() => setActiveTab('audit')}
-            className={cn(
-              "flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-200",
-              activeTab === 'audit' 
-                ? "bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] text-zinc-100 shadow-sm" 
-                : "text-zinc-400 hover:bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] hover:text-zinc-200"
-            )}
-          >
-            <History className={cn("h-4 w-4", activeTab === 'audit' ? "text-rose-400" : "")} />
-            Audit & System Logs
-          </button>
+          </div>
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto rounded-xl bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] p-8 shadow-sm relative">
+        <div className="flex-1 min-w-0">
           
+          {/* PROFILE TAB */}
           {activeTab === 'profile' && (
-            <div className="max-w-2xl space-y-8 animate-in fade-in duration-300">
-              <div>
-                <h2 className="text-xl font-bold text-zinc-100 mb-6 flex items-center gap-2">
-                  <User className="h-5 w-5 text-sky-400" /> Identity Settings
-                </h2>
-                <div className="space-y-4">
+            <div className="space-y-6 animate-in fade-in duration-500">
+              <div className="rounded-xl bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] p-6 shadow-sm">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="h-16 w-16 rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 font-bold text-2xl shadow-inner">
+                    {profileForm.login.substring(0, 2).toUpperCase()}
+                  </div>
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Email Address</label>
-                    <input type="email" defaultValue="admin@aegis-os.local" className="w-full rounded border border-white/10 bg-zinc-950 px-4 py-2 text-sm text-zinc-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none transition-all" />
+                    <h2 className="text-xl font-bold text-zinc-100">Profile Details</h2>
+                    <p className="text-sm text-zinc-500">Update your primary account information.</p>
                   </div>
                 </div>
-              </div>
 
-              <div className="pt-6 border-t border-white/5">
-                <h2 className="text-xl font-bold text-zinc-100 mb-6 flex items-center gap-2">
-                  <Lock className="h-5 w-5 text-sky-400" /> Password Escalation
-                </h2>
-                <form onSubmit={handlePasswordChange} className="rounded-lg bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] p-$1 space-y-4 shadow-sm">
+                <form onSubmit={handleProfileUpdate} className="space-y-5 max-w-lg">
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Current Password</label>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Login Identity</label>
                     <input 
-                      type="password" 
-                      required
-                      value={passwordForm.current}
-                      onChange={(e) => setPasswordForm(prev => ({ ...prev, current: e.target.value }))}
-                      className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-2 text-sm text-zinc-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none transition-all" 
+                      type="text"
+                      value={profileForm.login}
+                      onChange={(e) => setProfileForm({ ...profileForm, login: e.target.value })}
+                      className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none transition-all"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">New Password</label>
-                    <input 
-                      type="password" 
-                      required
-                      value={passwordForm.new}
-                      onChange={(e) => setPasswordForm(prev => ({ ...prev, new: e.target.value }))}
-                      className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-2 text-sm text-zinc-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none transition-all" 
-                    />
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Interface Theme</label>
+                    <select
+                      value={profileForm.theme}
+                      onChange={(e) => setProfileForm({ ...profileForm, theme: e.target.value })}
+                      className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none transition-all appearance-none"
+                    >
+                      <option value="dark">Dark (Liquid Glass)</option>
+                      <option value="system">System Default</option>
+                      <option value="light">Light Mode</option>
+                    </select>
                   </div>
-                  <div className="pt-2 flex items-center justify-between">
-                    <button type="submit" className="rounded bg-sky-500 px-6 py-2 text-sm font-bold text-white hover:bg-sky-600 transition-all duration-300 ease-out active:scale-95 shadow-[0_0_15px_rgba(14,165,233,0.3)]">
-                      Change Password
-                    </button>
-                    {passwordStatus === 'success' && (
-                      <span className="text-emerald-500 animate-pulse text-sm font-bold animate-pulse">Password Updated!</span>
-                    )}
-                  </div>
+
+                  <button 
+                    type="submit"
+                    className="flex items-center gap-2 rounded bg-sky-500 px-6 py-2.5 text-sm font-bold text-white hover:bg-sky-600 transition-all duration-300 ease-out active:scale-95 shadow-[0_0_15px_rgba(14,165,233,0.3)] mt-4"
+                  >
+                    <Save className="h-4 w-4" /> Save Preferences
+                  </button>
                 </form>
               </div>
 
-              <div className="pt-6 border-t border-white/5">
-                <h2 className="text-xl font-bold text-zinc-100 mb-6 flex items-center gap-2">
-                  <Key className="h-5 w-5 text-sky-400" /> Authentication
-                </h2>
-                <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 flex items-center justify-between transition-colors hover:bg-emerald-500/10">
-                  <div>
-                    <div className="font-bold text-zinc-200 text-sm">Two-Factor Authentication (2FA)</div>
-                    <div className="text-xs text-zinc-500 mt-1">Configured via TOTP (Google Authenticator)</div>
-                  </div>
-                  <button 
-                    onClick={() => setIs2FAModalOpen(true)}
-                    className="rounded bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] px-4 py-2 text-xs font-bold text-zinc-300 hover:bg-zinc-700 transition-colors"
-                  >
-                    Reconfigure
-                  </button>
+              {/* Read-only Tenant Info */}
+              <div className="rounded-xl bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] p-6 shadow-sm">
+                <h3 className="text-sm font-bold text-zinc-100 uppercase tracking-wider mb-4">Organization Tenant</h3>
+                <div className="grid grid-cols-2 gap-4">
+                   <div>
+                     <div className="text-[10px] uppercase text-zinc-500 mb-1">Tenant ID</div>
+                     <div className="font-mono text-sm text-zinc-300 bg-zinc-900 border border-white/5 px-3 py-1.5 rounded">{profile?.tenant_id || 'N/A'}</div>
+                   </div>
+                   <div>
+                     <div className="text-[10px] uppercase text-zinc-500 mb-1">Global Role</div>
+                     <div className="font-mono text-sm text-sky-400 bg-zinc-900 border border-white/5 px-3 py-1.5 rounded">{profile?.role || 'N/A'}</div>
+                   </div>
                 </div>
               </div>
-
             </div>
           )}
 
-          {activeTab === 'rbac' && (
-             <div className="space-y-6 animate-in fade-in duration-300">
-               <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-xl font-bold text-zinc-100 flex items-center gap-2">
-                    <ShieldAlert className="h-5 w-5 text-amber-400" /> Access Management
-                  </h2>
-                  <p className="text-sm text-zinc-500 mt-1">Control who has access to infrastructure commands.</p>
-                </div>
-                <button 
-                  onClick={() => openUserModal()}
-                  className="flex items-center gap-2 rounded bg-amber-500/10 px-4 py-2 text-sm font-bold text-amber-500 hover:bg-amber-500/20 transition-colors border border-amber-500/20"
-                >
-                  Add New User
-                </button>
-              </div>
-
-              <div className="rounded-lg bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] overflow-hidden">
-                <table className="w-full text-left text-sm text-zinc-400">
-                  <thead className="bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] text-xs font-semibold uppercase tracking-wider text-zinc-500 border-b border-white/5">
-                    <tr>
-                      <th className="px-6 py-4">User</th>
-                      <th className="px-6 py-4">Role</th>
-                      <th className="px-6 py-4">Permissions</th>
-                      <th className="px-6 py-4">Last Login</th>
-                      <th className="px-6 py-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {users.map(user => (
-                      <tr key={user.id} className="transition-all duration-300 ease-out hover:bg-white/[0.02] hover:scale-[1.01] active:scale-95">
-                        <td className="px-6 py-4 font-bold text-zinc-200">{user.email}</td>
-                        <td className="px-6 py-4">
-                          <span className={cn(
-                            "rounded border px-2 py-1 font-mono text-[10px] uppercase",
-                            user.role === 'GLOBAL_ADMIN' ? "bg-amber-500/10 border-amber-500/20 text-amber-400" :
-                            user.role === 'TEAM_ADMIN' ? "bg-sky-500/10 border-sky-500/20 text-sky-400" :
-                            "bg-zinc-800 border-white/10 text-zinc-300"
-                          )}>
-                            {user.role}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-wrap gap-1">
-                            {user.permissions.map(p => (
-                              <span key={p} className="text-[9px] bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] px-1.5 py-0.5 rounded text-zinc-400 uppercase tracking-wider">{p}</span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-xs font-mono">{user.lastLogin}</td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex justify-end gap-3">
-                            <button 
-                              onClick={() => openUserModal(user)}
-                              className="flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 font-bold transition-colors"
-                            >
-                              <Edit className="w-3 h-3" /> Edit
-                            </button>
-                            <button 
-                              onClick={() => handleRevokeUser(user.id)}
-                              className="text-xs text-rose-400 hover:text-rose-300 font-bold transition-colors"
-                            >
-                              Revoke
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {users.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-4 text-center text-zinc-500 text-sm">
-                          No users found.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-             </div>
-          )}
-
-          {activeTab === 'notifications' && (
-            <div className="max-w-2xl space-y-6 animate-in fade-in duration-300">
-               <div>
-                  <h2 className="text-xl font-bold text-zinc-100 flex items-center gap-2 mb-6">
-                    <Send className="h-5 w-5 text-emerald-400" /> Platform Dispatch
-                  </h2>
+          {/* SECURITY TAB */}
+          {activeTab === 'security' && (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              {/* Password Change */}
+              <div className="rounded-xl bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
+                    <Key className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-zinc-100">Authentication Credentials</h2>
+                    <p className="text-sm text-zinc-500">Update your encryption passphrase.</p>
+                  </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="rounded-lg bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] p-$1 group transition-colors hover:border-blue-500/30">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-bold text-zinc-200 flex items-center gap-2">Telegram Setup <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-blue-500 border border-blue-500/20">Active</span></h3>
-                        <p className="text-xs text-zinc-500 mt-1">Routes alerts securely to configured Telegram ID</p>
-                      </div>
-                      <button className="text-xs font-bold text-sky-400 hover:text-sky-300 transition-all duration-300 ease-out active:scale-95">Configure</button>
+                <form onSubmit={handlePasswordUpdate} className="space-y-4 max-w-lg">
+                  {passwordMessage.text && (
+                    <div className={cn("text-xs font-mono p-3 rounded border",
+                      passwordMessage.type === 'error' ? "bg-rose-500/10 border-rose-500/20 text-rose-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                    )}>
+                      {passwordMessage.text}
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Current Passphrase</label>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={passwordForm.current_password}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
+                      className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-2.5 text-sm font-mono text-zinc-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">New Passphrase</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={passwordForm.new_password}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
+                        className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-2.5 pr-10 text-sm font-mono text-zinc-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
                     </div>
                   </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Confirm New Passphrase</label>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={passwordForm.confirm_password}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })}
+                      className="w-full rounded border border-white/10 bg-zinc-900 px-4 py-2.5 text-sm font-mono text-zinc-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="rounded bg-zinc-800 px-6 py-2.5 text-sm font-bold text-zinc-200 hover:bg-zinc-700 transition-all duration-300 ease-out active:scale-95 border border-white/5 mt-4 hover:border-emerald-500/50"
+                  >
+                    Update Password
+                  </button>
+                </form>
+              </div>
+
+              {/* 2FA Configuration */}
+              <div className="rounded-xl bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] p-6 shadow-sm border-emerald-500/10">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-zinc-100 flex items-center gap-2 mb-1">
+                      <Smartphone className="h-5 w-5 text-emerald-400" />
+                      Two-Factor Authentication (2FA)
+                    </h3>
+                    <p className="text-sm text-zinc-500 max-w-lg">
+                      Require a 6-digit TOTP code from your mobile device when executing critical operations (e.g., terminal access, destructive scripts).
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="flex items-center gap-1.5 text-xs font-bold uppercase text-zinc-500 bg-zinc-900 px-3 py-1 rounded border border-white/5">
+                      Status: <span className="text-rose-400">Disabled</span>
+                    </span>
+                    <button
+                      onClick={() => setIs2FAModalOpen(true)}
+                      className="rounded bg-emerald-500/10 border border-emerald-500/30 px-4 py-2 text-xs font-bold uppercase tracking-wider text-emerald-400 hover:bg-emerald-500/20 transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)]"
+                    >
+                      Enable TOTP
+                    </button>
+                  </div>
                 </div>
+              </div>
             </div>
           )}
 
-          {activeTab === 'audit' && (
-            <div className="flex flex-col h-full animate-in fade-in duration-300">
-               <div>
-                  <h2 className="text-xl font-bold text-zinc-100 flex items-center gap-2 mb-6">
-                    <History className="h-5 w-5 text-rose-400" /> Immutable Audit Trail
-                  </h2>
-                  <p className="text-sm text-zinc-500 mb-6">Secure log of all administrative actions and system events. Retained for 365 days.</p>
+          {/* TEAM / RBAC TAB */}
+          {activeTab === 'team' && profile?.role === 'GLOBAL_ADMIN' && (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              <div className="rounded-xl bg-zinc-900/40 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] overflow-hidden shadow-sm flex flex-col">
+                <div className="p-6 border-b border-white/[0.08] flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-zinc-100 flex items-center gap-2">
+                      <ShieldAlert className="h-5 w-5 text-amber-400" /> Identity Access Management
+                    </h2>
+                    <p className="text-sm text-zinc-500 mt-1">Manage users, global roles, and precise system permissions.</p>
+                  </div>
+                  <button
+                    onClick={openNewUserModal}
+                    className="rounded bg-amber-500 px-4 py-2 text-sm font-bold text-zinc-950 hover:bg-amber-400 transition-all duration-300 ease-out active:scale-95 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                  >
+                    Add Identity
+                  </button>
                 </div>
-                
-                <div className="flex-1 overflow-y-auto rounded border border-white/5 bg-[#0a0a0c] p-4 text-xs font-mono text-zinc-400 space-y-2 shadow-inner">
-                  <div>[2024-03-10T10:15:00Z] <span className="text-amber-400">WARN</span> Rule &quot;Network Drop&quot; muted by test@aegis-os.local</div>
-                  <div>[2024-03-10T09:30:12Z] <span className="text-emerald-400">INFO</span> Agent v2.0.4 deployed to host <span className="text-zinc-300">dev-104</span> by admin@aegis-os.local</div>
-                  <div>[2024-03-10T08:45:00Z] <span className="text-sky-400">AUTH</span> Successful SSH proxy session established to <span className="text-zinc-300">db-master-01</span></div>
-                  <div>[2024-03-09T22:15:00Z] <span className="text-emerald-400">INFO</span> Fleet backup snapshots completed across 12 managed nodes</div>
-                  <div>[2024-03-09T18:02:11Z] <span className="text-rose-400">CRIT</span> Failed login attempt from IP 192.168.1.100 (reason: invalid 2FA)</div>
-                  <div>[2024-03-09T15:20:00Z] <span className="text-emerald-400">INFO</span> Configuration &quot;notification.slack&quot; updated by admin@aegis-os.local</div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-zinc-900/80 text-xs uppercase tracking-wider text-zinc-500 border-b border-white/5">
+                      <tr>
+                        <th className="p-4 font-bold">User Identity</th>
+                        <th className="p-4 font-bold">Global Role</th>
+                        <th className="p-4 font-bold">Status</th>
+                        <th className="p-4 font-bold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 text-zinc-300">
+                      {users.length === 0 ? (
+                        <tr><td colSpan={4} className="text-center p-4 text-zinc-500 font-mono text-xs">No records</td></tr>
+                      ) : (
+                        users.map((u) => (
+                          <tr key={u.id} className="transition-colors hover:bg-white/[0.02]">
+                            <td className="p-4">
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded bg-zinc-800 flex items-center justify-center font-bold text-zinc-400 border border-white/5">
+                                  {u.email.substring(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="font-bold text-zinc-200">{u.email}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <span className={cn(
+                                "rounded px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border",
+                                u.role === 'GLOBAL_ADMIN' ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                                u.role === 'TEAM_ADMIN' ? "bg-sky-500/10 text-sky-400 border-sky-500/20" :
+                                "bg-zinc-800 text-zinc-400 border-white/5"
+                              )}>
+                                {u.role.replace('_', ' ')}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center gap-2">
+                                <span className={cn("h-2 w-2 rounded-full", u.status === 'active' ? "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" : "bg-rose-500")} />
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">{u.status}</span>
+                              </div>
+                            </td>
+                            <td className="p-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => openEditUserModal(u)}
+                                  className="text-[11px] font-bold uppercase tracking-wider text-sky-400 hover:text-sky-300 px-3 py-1 rounded hover:bg-sky-500/10 transition-colors"
+                                >
+                                  Edit Policy
+                                </button>
+                                {u.id !== profile?.user_id && (
+                                  <button
+                                    onClick={() => handleDeleteUser(u.id)}
+                                    className="p-1.5 rounded text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
+              </div>
             </div>
           )}
 

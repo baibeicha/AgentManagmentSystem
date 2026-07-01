@@ -1,6 +1,7 @@
 package client
 
 import (
+	clients "AgentManagmentSystem/internal/gateway/client"
 	"AgentManagmentSystem/pkg/config"
 	"fmt"
 	"log/slog"
@@ -16,7 +17,7 @@ type GRPCClientConfig struct {
 	TLSCertPath         string
 }
 
-func GetGrpcConfig(cfg *config.Config, serviceName string) *GRPCClientConfig {
+func GetGrpcConfig(cfg *config.Config, serviceName clients.ClientName) *GRPCClientConfig {
 	return &GRPCClientConfig{
 		Addr:                cfg.GetString("service." + serviceName + ".addr"),
 		Port:                cfg.GetString("service." + serviceName + ".port"),
@@ -25,7 +26,8 @@ func GetGrpcConfig(cfg *config.Config, serviceName string) *GRPCClientConfig {
 	}
 }
 
-func NewGrpcClient(cfg *config.Config, log *slog.Logger, clientName string) (*grpc.ClientConn, error) {
+func NewGrpcClient(cfg *config.Config, clientName string) (*grpc.ClientConn, error) {
+	log := slog.Default()
 	client := GetGrpcConfig(cfg, clientName)
 
 	if client == nil {

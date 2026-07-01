@@ -75,9 +75,21 @@ type JWTTTLConfig struct {
 }
 
 type LogConfig struct {
-	Type  string `mapstructure:"type"`
-	Level string `mapstructure:"level"`
-	Path  string `mapstructure:"path"`
+	Type  string        `mapstructure:"type"`
+	Level string        `mapstructure:"level"`
+	File  LogFileConfig `mapstructure:"file"`
+}
+
+type LogFileConfig struct {
+	Path       string `mapstructure:"path"`
+	MaxSizeMb  int    `mapstructure:"maxSizeMb"`
+	MaxBackups int    `mapstructure:"maxBackups"`
+	MaxAgeDays int    `mapstructure:"maxAgeDays"`
+	Compress   bool   `mapstructure:"compress"`
+}
+
+func (lfc *LogFileConfig) ToArgs() (string, int, int, int, bool) {
+	return lfc.Path, lfc.MaxSizeMb, lfc.MaxBackups, lfc.MaxAgeDays, lfc.Compress
 }
 
 func (t *JWTTTLConfig) GetRefreshTTL() time.Duration {
